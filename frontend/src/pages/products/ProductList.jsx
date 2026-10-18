@@ -4,6 +4,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
+import { getProductImageUrl } from '../../utils/productImages';
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
@@ -252,7 +253,24 @@ export default function ProductList() {
                     <td className="mono" style={{ color: '#475569', fontSize: '0.8rem' }}>
                       {p.barcode || '—'}
                     </td>
-                    <td style={{ fontWeight: 600 }}>{p.name}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={getProductImageUrl(p)}
+                          alt={p.name}
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            border: '1px solid #e2e8f0',
+                            backgroundColor: '#f8fafc',
+                            flexShrink: 0
+                          }}
+                        />
+                        <span>{p.name}</span>
+                      </div>
+                    </td>
                     <td>{p.category?.name || 'Uncategorized'}</td>
                     <td className="mono">${Number(p.costPrice).toFixed(2)}</td>
                     <td className="mono" style={{ fontWeight: 700, color: '#2563eb' }}>

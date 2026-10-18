@@ -14,7 +14,9 @@ import {
   Sparkles,
   ShoppingBag,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Zap,
+  Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
@@ -23,6 +25,7 @@ import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
 import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
+import { getProductImageUrl, playScannerBeep } from '../../utils/productImages';
 
 export default function PosCheckout() {
   const {
@@ -53,6 +56,8 @@ export default function PosCheckout() {
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState('');
+  const [scanToast, setScanToast] = useState('');
+  const [showDemoBarcodes, setShowDemoBarcodes] = useState(false);
 
   // Payment State
   const [paymentMethod, setPaymentMethod] = useState('CASH'); // 'CASH' or 'QR_PAYMENT'
@@ -91,25 +96,56 @@ export default function PosCheckout() {
     loadPosData();
   }, [setExchangeRate]);
 
-  // Fast Barcode Scanner lookup on Enter
-  const handleBarcodeSubmit = async (e) => {
-    e.preventDefault();
-    if (!barcodeInput.trim()) return;
+  // Robust Barcode Scanner Lookup
+  const executeScan = async (codeToScan) => {
+    const code = (codeToScan || barcodeInput).trim();
+    if (!code) return;
 
     setError('');
+
+    // 1. Check in-memory loaded products first
+    const localMatch = products.find(
+      (p) =>
+        (p.barcode && p.barcode.trim() === code) ||
+        (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
+        (p.name && p.name.toLowerCase() === code.toLowerCase())
+    );
+
+    if (localMatch) {
+      if (localMatch.currentStock <= 0) {
+        setError(`"${localMatch.name}" is currently out of stock.`);
+        return;
+      }
+      playScannerBeep();
+      addToCart(localMatch, 1);
+      setBarcodeInput('');
+      setScanToast(`✓ Scanned: ${localMatch.name}`);
+      setTimeout(() => setScanToast(''), 2500);
+      return;
+    }
+
+    // 2. Fetch from backend if not yet in memory
     try {
-      const res = await api.get(`/products/barcode/${encodeURIComponent(barcodeInput.trim())}`);
+      const res = await api.get(`/products/barcode/${encodeURIComponent(code)}`);
       if (res.data) {
         if (res.data.currentStock <= 0) {
           setError(`"${res.data.name}" is currently out of stock.`);
         } else {
+          playScannerBeep();
           addToCart(res.data, 1);
           setBarcodeInput('');
+          setScanToast(`✓ Scanned: ${res.data.name}`);
+          setTimeout(() => setScanToast(''), 2500);
         }
       }
     } catch (err) {
-      setError(err.message || `No product found matching barcode "${barcodeInput}"`);
+      setError(err.message || `No product found matching barcode "${code}"`);
     }
+  };
+
+  const handleBarcodeSubmit = (e) => {
+    e.preventDefault();
+    executeScan();
   };
 
   // Filter products by category and search term
@@ -188,10 +224,9 @@ export default function PosCheckout() {
       const saleResult = res.data;
 
       if (paymentMethod === 'QR_PAYMENT') {
-        // Show Demonstration QR Payment Modal
+        // Show Upgraded KHQR Payment Modal
         setPendingQrData(saleResult);
         setQrModalOpen(true);
-        clearCart();
       } else {
         // Cash payment completed immediately
         setCompletedSale(saleResult.sale);
@@ -209,6 +244,25 @@ export default function PosCheckout() {
     }
   };
 
+  const handleConfirmQrPayment = () => {
+    setQrModalOpen(false);
+    setCompletedSale(pendingQrData.sale);
+    setReceiptOpen(true);
+    clearCart();
+  };
+
+  // Demo products for quick barcode testing
+  const demoBarcodeList = [
+    { name: 'Water', code: '884100100101' },
+    { name: 'Coke', code: '884100100102' },
+    { name: 'Milk', code: '884100100103' },
+    { name: 'Eggs', code: '884100100104' },
+    { name: 'Baguette', code: '884100100105' },
+    { name: 'Rice 5kg', code: '884100100106' },
+    { name: 'Noodles', code: '884100100107' },
+    { name: 'Chips', code: '884100100108' }
+  ];
+
   return (
     <div style={{ display: 'flex', gap: '24px', height: 'calc(100vh - 124px)' }}>
       {/* LEFT PANEL: Catalog, Barcode Scanner, & Category Filters */}
@@ -219,24 +273,24 @@ export default function PosCheckout() {
           <div
             style={{
               padding: '10px 16px',
-              backgroundColor: '#fffbeb',
-              border: '1px solid #fde68a',
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
               borderRadius: '10px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: '0.825rem',
-              color: '#92400e'
+              color: '#1e40af'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={16} color="#d97706" />
-              <span><strong>Notice:</strong> No cashier shift is currently open. You can test checkout, but opening a shift is recommended for cash reconciliation.</span>
+              <Clock size={16} color="#2563eb" />
+              <span><strong>Notice:</strong> No shift currently open. You can test checkout, or open a shift for drawer reconciliation.</span>
             </div>
             <button
               onClick={() => navigate('/shifts')}
-              className="btn btn-sm"
-              style={{ backgroundColor: '#f59e0b', color: 'white', fontWeight: 600 }}
+              className="btn btn-sm btn-primary"
+              style={{ padding: '4px 12px', fontSize: '0.75rem' }}
             >
               Open Shift <ArrowRight size={14} />
             </button>
@@ -257,26 +311,38 @@ export default function PosCheckout() {
               className="form-input"
               style={{
                 paddingLeft: '44px',
-                paddingRight: '90px',
+                paddingRight: '180px',
                 fontWeight: 500,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                borderColor: scanToast ? '#10b981' : '#cbd5e1'
               }}
-              placeholder="Scan or type barcode (Press Enter)..."
+              placeholder="Scan barcode or type SKU (Press Enter)..."
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
               autoFocus
             />
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm"
-              style={{ position: 'absolute', right: '6px', top: '5px' }}
-            >
-              Scan Barcode
-            </button>
+            <div style={{ position: 'absolute', right: '6px', top: '5px', display: 'flex', gap: '4px' }}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
+                title="Toggle 1-Click Demo Barcode Scanner"
+                style={{ fontSize: '0.725rem', padding: '5px 8px', color: '#2563eb', borderColor: '#bfdbfe' }}
+              >
+                <Zap size={13} /> {showDemoBarcodes ? 'Hide' : 'Quick Barcodes'}
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm"
+                style={{ fontSize: '0.75rem', padding: '5px 12px' }}
+              >
+                Scan
+              </button>
+            </div>
           </form>
 
           {/* Search Filter */}
-          <div style={{ position: 'relative', width: '280px' }}>
+          <div style={{ position: 'relative', width: '260px' }}>
             <Search
               size={18}
               style={{ position: 'absolute', left: '14px', top: '12px', color: '#64748b' }}
@@ -285,7 +351,7 @@ export default function PosCheckout() {
               type="text"
               className="form-input"
               style={{ paddingLeft: '40px', paddingRight: searchQuery ? '32px' : '14px' }}
-              placeholder="Search product or SKU..."
+              placeholder="Search product..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -308,6 +374,58 @@ export default function PosCheckout() {
             )}
           </div>
         </div>
+
+        {/* 1-Click Demo Barcodes Strip */}
+        {showDemoBarcodes && (
+          <div
+            style={{
+              padding: '10px 14px',
+              backgroundColor: '#f8faff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase' }}>
+              ⚡ 1-Click Scanner:
+            </span>
+            {demoBarcodeList.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                className="btn btn-outline btn-sm mono"
+                style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px' }}
+                onClick={() => executeScan(item.code)}
+              >
+                {item.name} ({item.code.slice(-4)})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Scan Success Toast */}
+        {scanToast && (
+          <div
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              borderRadius: '8px',
+              color: '#065f46',
+              fontSize: '0.825rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Check size={16} /> {scanToast}
+          </div>
+        )}
 
         {/* Category Pills Bar */}
         <div className="pill-bar">
@@ -335,14 +453,14 @@ export default function PosCheckout() {
 
         <Alert type="danger" message={error} onClose={() => setError('')} />
 
-        {/* Product Cards Grid */}
+        {/* Product Cards Grid with Fixed Borders and Pictures */}
         <div
           style={{
             flex: 1,
             overflowY: 'auto',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))',
-            gap: '14px',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+            gap: '16px',
             alignContent: 'start',
             paddingRight: '4px'
           }}
@@ -360,65 +478,181 @@ export default function PosCheckout() {
           ) : (
             filteredProducts.map((p) => {
               const isOutOfStock = p.currentStock <= 0;
+              const imgUrl = getProductImageUrl(p);
+
               return (
                 <div
                   key={p.id}
-                  className="product-card"
-                  onClick={() => !isOutOfStock && addToCart(p, 1)}
+                  onClick={() => {
+                    if (!isOutOfStock) {
+                      playScannerBeep();
+                      addToCart(p, 1);
+                    }
+                  }}
                   style={{
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    backgroundColor: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
                     cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                    opacity: isOutOfStock ? 0.55 : 1
+                    opacity: isOutOfStock ? 0.55 : 1,
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                    userSelect: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isOutOfStock) {
+                      e.currentTarget.style.borderColor = '#2563eb';
+                      e.currentTarget.style.transform = 'translateY(-3px)';
+                      e.currentTarget.style.boxShadow = '0 10px 20px -5px rgba(37, 99, 235, 0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
                   }}
                 >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="badge badge-neutral mono" style={{ fontSize: '0.675rem' }}>
-                        {p.sku}
-                      </span>
+                  {/* Fixed Product Picture Container */}
+                  <div
+                    style={{
+                      height: '130px',
+                      width: '100%',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      backgroundColor: '#f8fafc',
+                      borderBottom: '1px solid #f1f5f9'
+                    }}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={p.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
+                      }}
+                      loading="lazy"
+                    />
+
+                    {/* Floating Top SKU Badge */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                        backdropFilter: 'blur(4px)',
+                        padding: '2px 6px',
+                        borderRadius: '6px',
+                        fontSize: '0.675rem',
+                        fontWeight: 700,
+                        color: '#334155',
+                        border: '1px solid rgba(0, 0, 0, 0.08)'
+                      }}
+                      className="mono"
+                    >
+                      {p.sku}
+                    </div>
+
+                    {/* Floating Stock Status Badge */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px'
+                      }}
+                    >
                       <span
                         className={`badge ${
                           isOutOfStock ? 'badge-danger' : p.isLowStock ? 'badge-warning' : 'badge-success'
                         }`}
-                        style={{ fontSize: '0.675rem' }}
+                        style={{ fontSize: '0.65rem', padding: '2px 7px' }}
                       >
                         {isOutOfStock ? 'Out of Stock' : `${p.currentStock} in stock`}
                       </span>
                     </div>
-
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: '0.95rem',
-                        marginTop: '10px',
-                        lineHeight: 1.35,
-                        color: '#0f172a'
-                      }}
-                    >
-                      {p.name}
-                    </div>
-
-                    {p.barcode && (
-                      <div className="mono" style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>
-                        #{p.barcode}
-                      </div>
-                    )}
                   </div>
 
+                  {/* Fixed Details Area */}
                   <div
                     style={{
-                      marginTop: '16px',
-                      paddingTop: '10px',
-                      borderTop: '1px solid #f1f5f9',
+                      padding: '12px 14px',
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'baseline'
+                      flexDirection: 'column',
+                      flex: 1,
+                      justifyContent: 'space-between'
                     }}
                   >
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2563eb' }} className="mono">
-                      ${Number(p.sellingPrice).toFixed(2)}
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          color: '#0f172a',
+                          lineHeight: 1.35,
+                          height: '38px',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {p.name}
+                      </div>
+
+                      {p.barcode && (
+                        <div
+                          className="mono"
+                          style={{
+                            fontSize: '0.7rem',
+                            color: '#64748b',
+                            marginTop: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Barcode size={12} /> {p.barcode}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
-                      {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
+
+                    {/* Fixed Price & Add Section */}
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid #f1f5f9',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-end'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2563eb' }} className="mono">
+                          ${Number(p.sellingPrice).toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748b' }}>
+                          {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '0.75rem',
+                          color: '#2563eb',
+                          borderColor: '#bfdbfe'
+                        }}
+                      >
+                        + Add
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -438,7 +672,8 @@ export default function PosCheckout() {
           padding: '20px',
           backgroundColor: '#ffffff',
           boxShadow: 'var(--shadow-md)',
-          borderRadius: 'var(--radius-xl)'
+          borderRadius: 'var(--radius-xl)',
+          border: '1.5px solid #e2e8f0'
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -577,7 +812,7 @@ export default function PosCheckout() {
           </div>
         </div>
 
-        {/* Payment Method Selector */}
+        {/* Payment Method Selector: Cash vs Scan QR */}
         <div style={{ margin: '10px 0' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <button
@@ -594,7 +829,7 @@ export default function PosCheckout() {
               onClick={() => setPaymentMethod('QR_PAYMENT')}
               style={{ padding: '10px 12px', fontSize: '0.85rem', fontWeight: 700 }}
             >
-              <QrCode size={16} /> QR / E-Wallet
+              <QrCode size={16} /> Scan QR
             </button>
           </div>
         </div>
@@ -729,98 +964,182 @@ export default function PosCheckout() {
           onClick={handleCheckout}
         >
           {checkoutLoading ? 'Processing Checkout...' : (
-            paymentMethod === 'CASH' ? '⚡ Complete Cash Sale' : '📱 Generate Demo KHQR Code'
+            paymentMethod === 'CASH' ? '⚡ Complete Cash Sale' : '📱 Scan QR Code'
           )}
         </button>
       </div>
 
-      {/* Demonstration QR Payment Modal */}
+      {/* Upgraded Official Bakong / KHQR Payment Modal */}
       <Modal
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
-        title="Demonstration QR / E-Wallet Payment"
-        maxWidth="460px"
+        title="KHQR Instant Payment"
+        maxWidth="450px"
       >
-        <div style={{ textAlign: 'center', padding: '10px 0' }}>
+        <div style={{ textAlign: 'center', padding: '6px 0' }}>
+          {/* Official KHQR / Bakong Header Bar */}
           <div
             style={{
-              backgroundColor: '#eff6ff',
-              border: '2px dashed #3b82f6',
-              borderRadius: '20px',
-              padding: '24px',
-              display: 'inline-block',
-              margin: '0 auto 16px auto',
-              boxShadow: '0 8px 20px rgba(37, 99, 235, 0.15)'
+              backgroundColor: '#e11d48',
+              borderRadius: '12px 12px 0 0',
+              padding: '10px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#ffffff'
             }}
           >
-            {/* Realistic KHQR Vector Representation */}
-            <svg width="200" height="200" viewBox="0 0 100 100" style={{ display: 'block' }}>
-              <rect width="100" height="100" fill="#ffffff" rx="8" />
-              {/* Corner position markers */}
-              <rect x="6" y="6" width="24" height="24" fill="#0f172a" rx="4" />
-              <rect x="10" y="10" width="16" height="16" fill="#ffffff" rx="2" />
-              <rect x="14" y="14" width="8" height="8" fill="#0f172a" rx="1" />
-
-              <rect x="70" y="6" width="24" height="24" fill="#0f172a" rx="4" />
-              <rect x="74" y="10" width="16" height="16" fill="#ffffff" rx="2" />
-              <rect x="78" y="14" width="8" height="8" fill="#0f172a" rx="1" />
-
-              <rect x="6" y="70" width="24" height="24" fill="#0f172a" rx="4" />
-              <rect x="10" y="74" width="16" height="16" fill="#ffffff" rx="2" />
-              <rect x="14" y="78" width="8" height="8" fill="#0f172a" rx="1" />
-
-              {/* Data blocks */}
-              <rect x="36" y="10" width="6" height="6" fill="#0f172a" rx="1" />
-              <rect x="46" y="14" width="8" height="6" fill="#0f172a" rx="1" />
-              <rect x="38" y="30" width="24" height="24" fill="#2563eb" rx="6" />
-              <text x="50" y="46" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">KHQR</text>
-              <rect x="10" y="44" width="6" height="12" fill="#0f172a" rx="1" />
-              <rect x="75" y="40" width="14" height="6" fill="#0f172a" rx="1" />
-              <rect x="50" y="64" width="10" height="10" fill="#0f172a" rx="1" />
-              <rect x="70" y="70" width="8" height="8" fill="#0f172a" rx="1" />
-              <rect x="84" y="74" width="8" height="8" fill="#0f172a" rx="1" />
-              <rect x="36" y="80" width="10" height="6" fill="#0f172a" rx="1" />
-            </svg>
-            <div style={{ marginTop: '12px', fontSize: '0.85rem', fontWeight: 800, color: '#2563eb', letterSpacing: '0.06em' }}>
-              BAKONG • KHQR READY
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 900, fontSize: '1.1rem', letterSpacing: '0.05em' }}>KHQR</span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.9 }}>• Bakong Payment</span>
             </div>
+            <span
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.7rem',
+                fontWeight: 700
+              }}
+              className="mono"
+            >
+              REF #{pendingQrData?.sale?.receiptNumber || '2026'}
+            </span>
           </div>
 
-          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }} className="mono">
-            ${Number(pendingQrData?.sale?.grandTotal).toFixed(2)}
-          </div>
-          <div style={{ fontSize: '1rem', color: '#2563eb', fontWeight: 700, marginBottom: '14px' }}>
-            {Math.round(Number(pendingQrData?.sale?.grandTotal) * (pendingQrData?.exchangeRate || 4100)).toLocaleString()} ៛ KHR
-          </div>
-
+          {/* QR Canvas Box */}
           <div
             style={{
-              backgroundColor: '#fffbeb',
-              border: '1px solid #fde68a',
-              borderRadius: '12px',
-              padding: '14px',
-              fontSize: '0.8rem',
-              color: '#92400e',
-              textAlign: 'left',
-              lineHeight: 1.5
+              backgroundColor: '#ffffff',
+              border: '2px solid #e11d48',
+              borderTop: 'none',
+              borderRadius: '0 0 16px 16px',
+              padding: '24px 20px',
+              boxShadow: '0 10px 25px -5px rgba(225, 29, 72, 0.15)'
             }}
           >
-            <strong>School Project Note:</strong> This is a sample QR payment demonstration. Order is marked{' '}
-            <span className="badge badge-warning">PENDING</span> and stock is reserved. Cashier or Manager verifies incoming payment in merchant app and confirms in <strong>Pending Payments</strong>.
-          </div>
-
-          <div style={{ marginTop: '18px', display: 'flex', gap: '10px' }}>
-            <button
-              className="btn btn-primary"
-              style={{ flex: 1, padding: '12px', fontWeight: 700 }}
-              onClick={() => {
-                setQrModalOpen(false);
-                setCompletedSale(pendingQrData.sale);
-                setReceiptOpen(true);
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'inline-block',
+                margin: '0 auto 14px auto',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                position: 'relative'
               }}
             >
-              <CheckCircle2 size={16} /> View Order Receipt
-            </button>
+              {/* High-Resolution Realistic Vector KHQR */}
+              <svg width="210" height="210" viewBox="0 0 100 100" style={{ display: 'block' }}>
+                <rect width="100" height="100" fill="#ffffff" rx="6" />
+                {/* Corner position markers */}
+                <rect x="6" y="6" width="24" height="24" fill="#0f172a" rx="4" />
+                <rect x="10" y="10" width="16" height="16" fill="#ffffff" rx="2" />
+                <rect x="14" y="14" width="8" height="8" fill="#e11d48" rx="1" />
+
+                <rect x="70" y="6" width="24" height="24" fill="#0f172a" rx="4" />
+                <rect x="74" y="10" width="16" height="16" fill="#ffffff" rx="2" />
+                <rect x="78" y="14" width="8" height="8" fill="#e11d48" rx="1" />
+
+                <rect x="6" y="70" width="24" height="24" fill="#0f172a" rx="4" />
+                <rect x="10" y="74" width="16" height="16" fill="#ffffff" rx="2" />
+                <rect x="14" y="78" width="8" height="8" fill="#e11d48" rx="1" />
+
+                {/* QR Data Matrix simulation */}
+                <rect x="36" y="8" width="6" height="6" fill="#0f172a" rx="1" />
+                <rect x="46" y="12" width="8" height="6" fill="#0f172a" rx="1" />
+                <rect x="58" y="8" width="6" height="6" fill="#0f172a" rx="1" />
+                
+                {/* Official Center KHQR Brand Emblem */}
+                <rect x="37" y="37" width="26" height="26" fill="#e11d48" rx="7" />
+                <text x="50" y="53" fill="#ffffff" fontSize="9" fontWeight="900" textAnchor="middle" fontFamily="sans-serif">
+                  KHQR
+                </text>
+
+                <rect x="10" y="44" width="8" height="10" fill="#0f172a" rx="1" />
+                <rect x="24" y="40" width="8" height="6" fill="#0f172a" rx="1" />
+                <rect x="72" y="38" width="14" height="6" fill="#0f172a" rx="1" />
+                <rect x="78" y="50" width="8" height="10" fill="#0f172a" rx="1" />
+                <rect x="44" y="70" width="14" height="8" fill="#0f172a" rx="1" />
+                <rect x="66" y="74" width="8" height="8" fill="#0f172a" rx="1" />
+                <rect x="80" y="76" width="10" height="8" fill="#0f172a" rx="1" />
+                <rect x="36" y="84" width="12" height="6" fill="#0f172a" rx="1" />
+              </svg>
+
+              {/* Status Scanning Pill */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '-10px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '9999px',
+                  padding: '3px 12px',
+                  fontSize: '0.725rem',
+                  fontWeight: 700,
+                  color: '#065f46',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10b981',
+                    boxShadow: '0 0 6px #10b981',
+                    display: 'inline-block'
+                  }}
+                />
+                Awaiting Customer Scan
+              </div>
+            </div>
+
+            {/* Total Amount Display */}
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: '1.9rem', fontWeight: 800, color: '#0f172a' }} className="mono">
+                ${Number(pendingQrData?.sale?.grandTotal).toFixed(2)}
+              </div>
+              <div style={{ fontSize: '1.1rem', color: '#e11d48', fontWeight: 800, marginTop: '2px' }}>
+                {Math.round(Number(pendingQrData?.sale?.grandTotal) * (pendingQrData?.exchangeRate || 4100)).toLocaleString()} ៛ KHR
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                Supports Bakong, ABA, Wing, ACLEDA, & all Cambodian banking apps
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ marginTop: '22px', display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ flex: 1, padding: '12px' }}
+                onClick={() => setQrModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-success"
+                style={{
+                  flex: 2,
+                  padding: '12px',
+                  fontWeight: 800,
+                  fontSize: '0.95rem',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+                }}
+                onClick={handleConfirmQrPayment}
+              >
+                <CheckCircle2 size={18} /> Confirm Payment
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
