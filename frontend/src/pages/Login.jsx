@@ -136,7 +136,67 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.775rem', color: '#94a3b8' }}>
+        {/* School Demo Quick Selector */}
+        <div
+          style={{
+            marginTop: '24px',
+            padding: '14px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px'
+          }}
+        >
+          <div
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: '#64748b',
+              marginBottom: '8px',
+              textAlign: 'center'
+            }}
+          >
+            Demo Accounts (1-Click Fill)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: '0.75rem', padding: '6px 4px', justifyContent: 'center' }}
+              onClick={() => {
+                setUsername('owner');
+                setPassword('password123');
+              }}
+            >
+              👑 Owner
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: '0.75rem', padding: '6px 4px', justifyContent: 'center' }}
+              onClick={() => {
+                setUsername('cashier');
+                setPassword('password123');
+              }}
+            >
+              🛒 Cashier
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: '0.75rem', padding: '6px 4px', justifyContent: 'center' }}
+              onClick={() => {
+                setUsername('inventory');
+                setPassword('password123');
+              }}
+            >
+              📦 Inventory
+            </button>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.775rem', color: '#94a3b8' }}>
           Protected by role-based access control & token authentication.
         </div>
       </div>
