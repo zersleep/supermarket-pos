@@ -42,7 +42,7 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 
 // Health Check Endpoint (safe: never leaks connection strings or secrets)
-app.get('/api/health', async (req, res) => {
+const healthHandler = async (req, res) => {
   let dbStatus = 'disconnected';
   try {
     // Quick test query to verify database connectivity
@@ -61,10 +61,14 @@ app.get('/api/health', async (req, res) => {
     environment: config.nodeEnv,
     database: dbStatus
   });
-});
+};
 
-// Main API routes
+app.get('/api/health', healthHandler);
+app.get('/health', healthHandler);
+
+// Main API routes (mounted on both /api and root / for resilience)
 app.use('/api', routes);
+app.use(routes);
 
 // 404 handler for undefined API routes
 app.use((req, res) => {
