@@ -24,7 +24,11 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || config.nodeEnv === 'development') {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.endsWith('.onrender.com') ||
+      config.nodeEnv === 'development'
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS policy.'));
