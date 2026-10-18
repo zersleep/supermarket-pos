@@ -90,6 +90,7 @@ async function main() {
       name: 'Vital Premium Mineral Water 500ml',
       sku: 'BEV-VIT-500',
       barcode: '884100100101',
+      imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Beverages',
       costPrice: 0.20,
       sellingPrice: 0.50,
@@ -101,6 +102,7 @@ async function main() {
       name: 'Coca-Cola Can 330ml',
       sku: 'BEV-COKE-330',
       barcode: '884100100102',
+      imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Beverages',
       costPrice: 0.35,
       sellingPrice: 0.75,
@@ -112,6 +114,7 @@ async function main() {
       name: 'Angkor Pure Fresh Milk 1L',
       sku: 'DAI-MILK-1L',
       barcode: '884100100103',
+      imageUrl: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Dairy & Eggs',
       costPrice: 1.50,
       sellingPrice: 2.20,
@@ -123,6 +126,7 @@ async function main() {
       name: 'Farm Fresh Brown Eggs (Pack of 10)',
       sku: 'DAI-EGGS-10P',
       barcode: '884100100104',
+      imageUrl: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Dairy & Eggs',
       costPrice: 1.20,
       sellingPrice: 1.80,
@@ -134,6 +138,7 @@ async function main() {
       name: 'French Baguette Bread 250g',
       sku: 'BAK-BAGU-250',
       barcode: '884100100105',
+      imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Bakery',
       costPrice: 0.40,
       sellingPrice: 0.90,
@@ -145,6 +150,7 @@ async function main() {
       name: 'Jasmine Fragrant Rice 5kg',
       sku: 'PAN-RICE-5KG',
       barcode: '884100100106',
+      imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Pantry & Dry Goods',
       costPrice: 4.20,
       sellingPrice: 6.50,
@@ -156,6 +162,7 @@ async function main() {
       name: 'Mama Instant Noodles Shrimp Tom Yum (Box of 30)',
       sku: 'PAN-NOOD-BOX',
       barcode: '884100100107',
+      imageUrl: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Pantry & Dry Goods',
       costPrice: 5.50,
       sellingPrice: 7.80,
@@ -167,6 +174,7 @@ async function main() {
       name: 'Lay’s Classic Potato Chips 50g',
       sku: 'SNK-LAYS-50G',
       barcode: '884100100108',
+      imageUrl: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=500&auto=format&fit=crop&q=80',
       categoryName: 'Snacks & Sweets',
       costPrice: 0.60,
       sellingPrice: 1.10,
@@ -189,6 +197,7 @@ async function main() {
           name: item.name,
           sku: item.sku,
           barcode: item.barcode,
+          imageUrl: item.imageUrl,
           categoryId,
           costPrice: item.costPrice,
           sellingPrice: item.sellingPrice,
@@ -224,6 +233,13 @@ async function main() {
           previousStock: 0,
           newStock: item.initialStock,
           reason: 'Initial stock seeding for store opening'
+        }
+      });
+    } else {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          imageUrl: item.imageUrl
         }
       });
     }

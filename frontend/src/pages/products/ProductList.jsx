@@ -34,6 +34,7 @@ export default function ProductList() {
     reorderLevel: 10,
     trackExpiry: true,
     isActive: true,
+    imageUrl: '',
     initialStock: '',
     expiryDate: ''
   });
@@ -82,6 +83,7 @@ export default function ProductList() {
       reorderLevel: 10,
       trackExpiry: true,
       isActive: true,
+      imageUrl: '',
       initialStock: '',
       expiryDate: ''
     });
@@ -96,6 +98,7 @@ export default function ProductList() {
       sku: product.sku,
       barcode: product.barcode || '',
       description: product.description || '',
+      imageUrl: product.imageUrl || '',
       categoryId: product.categoryId || '',
       costPrice: product.costPrice,
       sellingPrice: product.sellingPrice,
@@ -121,6 +124,7 @@ export default function ProductList() {
         sku: formData.sku,
         barcode: formData.barcode || undefined,
         description: formData.description || undefined,
+        imageUrl: formData.imageUrl || undefined,
         categoryId: formData.categoryId || undefined,
         costPrice: Number(formData.costPrice),
         sellingPrice: Number(formData.sellingPrice),
@@ -372,6 +376,78 @@ export default function ProductList() {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Product Image URL & Live Preview */}
+          <div className="form-group">
+            <label className="form-label">Product Image URL</label>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {formData.imageUrl ? (
+                <img
+                  src={formData.imageUrl}
+                  alt="Preview"
+                  style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '10px',
+                    objectFit: 'cover',
+                    border: '1.5px solid #2563eb',
+                    backgroundColor: '#f8fafc',
+                    flexShrink: 0
+                  }}
+                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80'; }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '10px',
+                    border: '1.5px dashed #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#94a3b8',
+                    fontSize: '0.7rem',
+                    flexShrink: 0,
+                    textAlign: 'center',
+                    padding: '2px'
+                  }}
+                >
+                  No Image
+                </div>
+              )}
+              <div style={{ flex: 1 }}>
+                <input
+                  type="url"
+                  className="form-input"
+                  placeholder="https://... (direct image link)"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                />
+                <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Presets:</span>
+                  {[
+                    { label: 'Water', url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=80' },
+                    { label: 'Coke', url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=80' },
+                    { label: 'Milk', url: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=80' },
+                    { label: 'Bread', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=80' },
+                    { label: 'Rice', url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&auto=format&fit=crop&q=80' },
+                    { label: 'Chips', url: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=500&auto=format&fit=crop&q=80' }
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: '0.675rem', padding: '2px 6px' }}
+                      onClick={() => setFormData({ ...formData, imageUrl: preset.url })}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
