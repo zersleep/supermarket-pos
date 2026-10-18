@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Barcode, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Edit, Barcode, CheckCircle, XCircle, X, Upload, Trash2 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
@@ -22,6 +22,8 @@ export default function ProductList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -66,6 +68,66 @@ export default function ProductList() {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchProducts();
+  };
+
+  const handleClearSearch = async () => {
+    setSearch('');
+    try {
+      setLoading(true);
+      setError('');
+      const [prodRes, catRes] = await Promise.all([
+        api.get(`/products?search=&categoryId=${selectedCategory}&status=${statusFilter}&limit=50`),
+        api.get('/categories')
+      ]);
+      setProducts(prodRes.data || []);
+      setCategories(catRes.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load products.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file (PNG, JPG, JPEG, WEBP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        // Resize proportionally if larger than 800px max dimension
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const openCreateModal = () => {
@@ -186,11 +248,35 @@ export default function ProductList() {
             <input
               type="text"
               className="form-input"
-              style={{ paddingLeft: '38px' }}
+              style={{ paddingLeft: '38px', paddingRight: search ? '36px' : '14px' }}
               placeholder="Search by name, SKU, or barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px',
+                  borderRadius: '50%'
+                }}
+                title="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           <select
@@ -379,75 +465,167 @@ export default function ProductList() {
             </div>
           </div>
 
-          {/* Product Image URL & Live Preview */}
-          <div className="form-group">
-            <label className="form-label">Product Image URL</label>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              {formData.imageUrl ? (
+          {/* Product Picture Upload & Live Preview */}
+          <div className="form-group" style={{ marginBottom: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label className="form-label" style={{ marginBottom: 0, fontWeight: 600 }}>Product Picture</label>
+              <button
+                type="button"
+                onClick={() => setShowUrlInput(!showUrlInput)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563eb',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                {showUrlInput ? 'Hide image link' : 'Or enter image link'}
+              </button>
+            </div>
+
+            {/* Hidden Native File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleImageFileSelect}
+            />
+
+            {/* Image Upload Area / Preview Card */}
+            {formData.imageUrl ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  border: '1.5px solid #bfdbfe',
+                  borderRadius: '12px'
+                }}
+              >
                 <img
                   src={formData.imageUrl}
-                  alt="Preview"
+                  alt="Product preview"
                   style={{
-                    width: '54px',
-                    height: '54px',
+                    width: '72px',
+                    height: '72px',
                     borderRadius: '10px',
                     objectFit: 'cover',
                     border: '1.5px solid #2563eb',
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: '#ffffff',
                     flexShrink: 0
                   }}
-                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80'; }}
+                  onError={(e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80';
+                  }}
                 />
-              ) : (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>
+                    Picture ready
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ fontSize: '0.75rem', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <Upload size={14} /> Change Picture
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '5px 10px',
+                        color: '#dc2626',
+                        borderColor: '#fca5a5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Trash2 size={14} /> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: '2px dashed #93c5fd',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  backgroundColor: '#eff6ff',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease'
+                }}
+              >
                 <div
                   style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '10px',
-                    border: '1.5px dashed #cbd5e1',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    backgroundColor: '#dbeafe',
+                    color: '#2563eb',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8',
-                    fontSize: '0.7rem',
-                    flexShrink: 0,
-                    textAlign: 'center',
-                    padding: '2px'
+                    margin: '0 auto 10px auto'
                   }}
                 >
-                  No Image
+                  <Upload size={22} />
                 </div>
-              )}
-              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e40af' }}>
+                  Click to choose a picture from your device
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                  Supports PNG, JPG, or WebP files
+                </div>
+              </div>
+            )}
+
+            {/* Optional URL input if toggled */}
+            {showUrlInput && (
+              <div style={{ marginTop: '10px' }}>
                 <input
-                  type="url"
+                  type="text"
                   className="form-input"
-                  placeholder="https://... (direct image link)"
+                  placeholder="https://... (or paste direct image URL)"
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                 />
-                <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Presets:</span>
-                  {[
-                    { label: 'Water', url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=80' },
-                    { label: 'Coke', url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=80' },
-                    { label: 'Milk', url: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=80' },
-                    { label: 'Bread', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=80' },
-                    { label: 'Rice', url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&auto=format&fit=crop&q=80' },
-                    { label: 'Chips', url: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=500&auto=format&fit=crop&q=80' }
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      style={{ fontSize: '0.675rem', padding: '2px 6px' }}
-                      onClick={() => setFormData({ ...formData, imageUrl: preset.url })}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
               </div>
+            )}
+
+            {/* Demo Sample Pictures Presets */}
+            <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Presets:</span>
+              {[
+                { label: 'Water', url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=80' },
+                { label: 'Coke', url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=80' },
+                { label: 'Milk', url: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=80' },
+                { label: 'Bread', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=80' },
+                { label: 'Rice', url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&auto=format&fit=crop&q=80' },
+                { label: 'Chips', url: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=500&auto=format&fit=crop&q=80' }
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '0.675rem', padding: '3px 8px' }}
+                  onClick={() => setFormData({ ...formData, imageUrl: preset.url })}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
           </div>
 

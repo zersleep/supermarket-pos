@@ -964,7 +964,7 @@ export default function PosCheckout() {
           onClick={handleCheckout}
         >
           {checkoutLoading ? 'Processing Checkout...' : (
-            paymentMethod === 'CASH' ? '⚡ Complete Cash Sale' : '📱 Scan QR Code'
+            paymentMethod === 'CASH' ? '⚡ Complete Cash Sale' : '📱 Scan QR'
           )}
         </button>
       </div>
@@ -973,7 +973,7 @@ export default function PosCheckout() {
       <Modal
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
-        title="KHQR Instant Payment"
+        title="Scan QR Payment"
         maxWidth="450px"
       >
         <div style={{ textAlign: 'center', padding: '6px 0' }}>

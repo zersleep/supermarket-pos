@@ -69,7 +69,7 @@ export default function PendingPayments() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Pending QR & E-Wallet Payments</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Pending Scan QR Payments</h1>
           <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
             Verify customer merchant app payments and manually confirm orders
           </p>
@@ -90,7 +90,7 @@ export default function PendingPayments() {
             <CheckCircle2 size={48} color="#10b981" style={{ margin: '0 auto 12px auto' }} />
             <h3 style={{ color: '#0f172a', fontWeight: 600 }}>All Caught Up!</h3>
             <p style={{ fontSize: '0.875rem', marginTop: '4px' }}>
-              No QR transactions are currently awaiting confirmation.
+              No Scan QR transactions are currently awaiting confirmation.
             </p>
           </div>
         ) : (

@@ -238,7 +238,7 @@ export default function Reports() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CreditCard color="#3b82f6" size={18} />
-                    <span style={{ fontWeight: 500 }}>QR & E-Wallet Payments</span>
+                    <span style={{ fontWeight: 500 }}>Scan QR Payments</span>
                   </div>
                   <span className="mono" style={{ fontWeight: 700 }}>
                     ${Number(salesReport.paymentMethods?.QR_PAYMENT || 0).toFixed(2)}

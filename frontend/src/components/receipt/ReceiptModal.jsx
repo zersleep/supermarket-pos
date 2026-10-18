@@ -134,7 +134,7 @@ export default function ReceiptModal({ isOpen, onClose, saleData, storeInfo }) {
         <div style={{ fontSize: '0.775rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Payment Method:</span>
-            <span style={{ fontWeight: 600 }}>{payment.method || 'CASH'}</span>
+            <span style={{ fontWeight: 600 }}>{payment.method === 'QR_PAYMENT' ? 'Scan QR' : (payment.method || 'CASH')}</span>
           </div>
           {isCash ? (
             <>

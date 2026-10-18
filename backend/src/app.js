@@ -36,9 +36,9 @@ app.use(cors({
   credentials: true
 }));
 
-// Body parsing with safe size limits
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+// Body parsing with safe size limits for image uploads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Health Check Endpoint (safe: never leaks connection strings or secrets)

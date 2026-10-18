@@ -256,7 +256,7 @@ export default function Dashboard() {
 
           {canOperatePos ? (
             <StatCard
-              title="Pending QR Payments"
+              title="Pending Scan QR"
               value={stats.pendingPaymentsCount}
               subtitle="Awaiting cashier approval"
               icon={QrCode}
@@ -302,10 +302,10 @@ export default function Dashboard() {
               <QrCode color="#d97706" size={24} />
               <div>
                 <div style={{ fontWeight: 700, color: '#92400e', fontSize: '0.95rem' }}>
-                  {stats.pendingPaymentsCount} Pending QR Payment(s)
+                  {stats.pendingPaymentsCount} Pending Scan QR Payment(s)
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#b45309' }}>
-                  Customer transactions submitted via Bakong / KHQR awaiting cashier verification.
+                  Customer transactions submitted via Scan QR awaiting cashier verification.
                 </div>
               </div>
             </div>
@@ -314,7 +314,7 @@ export default function Dashboard() {
               className="btn btn-sm"
               style={{ backgroundColor: '#f59e0b', color: 'white', fontWeight: 700 }}
             >
-              Verify Payments <ArrowRight size={14} />
+              Verify Scan QR <ArrowRight size={14} />
             </button>
           </div>
         )}

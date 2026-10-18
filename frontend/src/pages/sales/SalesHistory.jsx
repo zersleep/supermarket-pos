@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, RotateCcw, Calendar, Filter } from 'lucide-react';
+import { Search, Eye, RotateCcw, Calendar, Filter, X } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
@@ -29,11 +29,11 @@ export default function SalesHistory() {
   const { isOwner, isAdmin } = useAuth();
   const canRefund = isOwner || isAdmin;
 
-  const fetchSales = async () => {
+  const fetchSales = async (query = search) => {
     try {
       setLoading(true);
       setError('');
-      let url = `/sales?search=${encodeURIComponent(search)}&status=${statusFilter}`;
+      let url = `/sales?search=${encodeURIComponent(query)}&status=${statusFilter}`;
       if (startDate) url += `&startDate=${startDate}`;
       if (endDate) url += `&endDate=${endDate}`;
 
@@ -46,13 +46,16 @@ export default function SalesHistory() {
     }
   };
 
+  // Automatically fetch on filter change or debounced search typing
   useEffect(() => {
-    fetchSales();
-  }, [statusFilter, startDate, endDate]);
+    const timer = setTimeout(() => {
+      fetchSales(search);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [search, statusFilter, startDate, endDate]);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchSales();
+  const handleClearSearch = () => {
+    setSearch('');
   };
 
   const openReceipt = async (saleId) => {
@@ -156,7 +159,7 @@ export default function SalesHistory() {
 
       {/* Filter Bar */}
       <div className="card" style={{ padding: '14px 20px', marginBottom: '20px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <Search
               size={18}
@@ -165,11 +168,35 @@ export default function SalesHistory() {
             <input
               type="text"
               className="form-input"
-              style={{ paddingLeft: '38px' }}
+              style={{ paddingLeft: '38px', paddingRight: search ? '36px' : '14px' }}
               placeholder="Search receipt # or sale #..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px',
+                  borderRadius: '50%'
+                }}
+                title="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           <select
@@ -204,10 +231,23 @@ export default function SalesHistory() {
             title="End Date"
           />
 
-          <button type="submit" className="btn btn-primary">
-            Filter
-          </button>
-        </form>
+          {(search || statusFilter || startDate || endDate) && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('');
+                setStartDate('');
+                setEndDate('');
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Reset all filters"
+            >
+              <RotateCcw size={14} /> Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Sales Table */}
@@ -240,7 +280,7 @@ export default function SalesHistory() {
                     </td>
                     <td>{new Date(sale.createdAt).toLocaleString()}</td>
                     <td>{sale.cashier?.fullName || 'N/A'}</td>
-                    <td>{sale.payments?.map((p) => p.method).join(', ') || 'N/A'}</td>
+                    <td>{sale.payments?.map((p) => (p.method === 'QR_PAYMENT' ? 'Scan QR' : (p.method === 'CASH' ? 'Cash' : p.method))).join(', ') || 'N/A'}</td>
                     <td>
                       <span
                         className={`badge ${

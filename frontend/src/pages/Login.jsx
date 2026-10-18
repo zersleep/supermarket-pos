@@ -332,7 +332,7 @@ export default function Login() {
             >
               {loading ? 'Authenticating...' : (
                 <>
-                  <LogIn size={18} /> Sign In to Terminal <ArrowRight size={16} />
+                  <LogIn size={18} /> Sign In <ArrowRight size={16} />
                 </>
               )}
             </button>
