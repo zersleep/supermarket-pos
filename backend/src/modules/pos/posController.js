@@ -242,7 +242,7 @@ async function checkout(req, res, next) {
       const paymentRef = `PAY-${dateStr}-${String(Date.now()).slice(-6)}`;
       const qrData = data.paymentMethod === 'QR_PAYMENT'
         ? JSON.stringify({
-            store: 'Metro Supermarket',
+            store: 'Supermarket POS',
             saleNumber: sale.saleNumber,
             receiptNumber: sale.receiptNumber,
             amount: grandTotal,

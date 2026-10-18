@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   LogIn,
-  ShoppingBag,
+  ShoppingCart,
   ShieldCheck,
-  Zap,
   Boxes,
   QrCode,
   DollarSign,
@@ -50,10 +49,10 @@ export default function Login() {
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#090d16',
+        backgroundColor: '#f0f6fc',
         backgroundImage: `
-          radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.18) 0%, transparent 40%),
-          radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 40%)
+          radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+          radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%)
         `,
         display: 'flex',
         alignItems: 'center',
@@ -67,131 +66,138 @@ export default function Login() {
           maxWidth: '920px',
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          backgroundColor: '#0f172a',
+          backgroundColor: '#ffffff',
           borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7)',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 25px 60px -15px rgba(37, 99, 235, 0.12)',
           overflow: 'hidden'
         }}
       >
-        {/* Left Side: System Highlights & Features */}
+        {/* Left Side: Modern Blue & White Feature Overview */}
         <div
           style={{
             padding: '44px',
-            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-            borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+            backgroundColor: '#f8fafc',
+            borderRight: '1px solid #e2e8f0',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' }}>
               <div
                 style={{
-                  width: '44px',
-                  height: '44px',
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
-                  borderRadius: '12px',
+                  width: '46px',
+                  height: '46px',
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  borderRadius: '14px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
-                  boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)'
+                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)'
                 }}
               >
-                <ShoppingBag size={22} />
+                <ShoppingCart size={24} />
               </div>
               <div>
-                <h1 style={{ fontSize: '1.25rem', color: '#ffffff', letterSpacing: '-0.02em' }}>
-                  Metro POS
+                <h1 style={{ fontSize: '1.35rem', color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
+                  Supermarket POS
                 </h1>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Enterprise Supermarket System
+                <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>
+                  Retail & Cloud Inventory
                 </span>
               </div>
             </div>
 
             <h2
               style={{
-                fontSize: '1.5rem',
-                color: '#f8fafc',
-                lineHeight: 1.3,
-                marginBottom: '16px'
+                fontSize: '1.45rem',
+                color: '#0f172a',
+                lineHeight: 1.35,
+                marginBottom: '14px',
+                fontWeight: 700
               }}
             >
-              Practical, secure retail checkout & smart stock control.
+              Modern, fast retail checkout & batch inventory control.
             </h2>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '28px' }}>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: 1.6, marginBottom: '28px' }}>
               Built with React 18, Node.js REST API, Prisma ORM, and Neon PostgreSQL database.
             </p>
 
             {/* Feature Highlights */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: '#60a5fa',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '10px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#2563eb',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}
                 >
-                  <DollarSign size={16} />
+                  <DollarSign size={18} />
                 </div>
-                <span style={{ fontSize: '0.825rem', color: '#cbd5e1' }}>
+                <span style={{ fontSize: '0.85rem', color: '#334155' }}>
                   Dual-Currency checkout in <strong>USD ($)</strong> and <strong>KHR (៛)</strong>
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                    color: '#34d399',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '10px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#2563eb',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}
                 >
-                  <Boxes size={16} />
+                  <Boxes size={18} />
                 </div>
-                <span style={{ fontSize: '0.825rem', color: '#cbd5e1' }}>
+                <span style={{ fontSize: '0.85rem', color: '#334155' }}>
                   FEFO Batch Inventory tracking to prevent shelf expiry
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                    color: '#fbbf24',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '10px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#2563eb',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}
                 >
-                  <QrCode size={16} />
+                  <QrCode size={18} />
                 </div>
-                <span style={{ fontSize: '0.825rem', color: '#cbd5e1' }}>
+                <span style={{ fontSize: '0.85rem', color: '#334155' }}>
                   Cambodian KHQR digital payment simulation
                 </span>
               </div>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '30px' }}>
-            © 2026 Metro Supermarket Systems • School Project Edition
+          <div style={{ fontSize: '0.725rem', color: '#94a3b8', marginTop: '30px' }}>
+            © 2026 Supermarket POS Systems • School Project Edition
           </div>
         </div>
 
@@ -242,10 +248,10 @@ export default function Login() {
           {/* School Demo 1-Click Role Switcher */}
           <div
             style={{
-              padding: '12px',
+              padding: '14px',
               backgroundColor: '#f8fafc',
               border: '1px solid #e2e8f0',
-              borderRadius: '12px',
+              borderRadius: '14px',
               marginBottom: '22px'
             }}
           >
@@ -255,7 +261,7 @@ export default function Login() {
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
-                color: '#64748b',
+                color: '#2563eb',
                 marginBottom: '8px'
               }}
             >
@@ -292,7 +298,7 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <User size={14} color="#64748b" /> Username
+                <User size={14} color="#2563eb" /> Username
               </label>
               <input
                 type="text"
@@ -306,7 +312,7 @@ export default function Login() {
 
             <div className="form-group" style={{ marginBottom: '26px' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Lock size={14} color="#64748b" /> Password
+                <Lock size={14} color="#2563eb" /> Password
               </label>
               <input
                 type="password"

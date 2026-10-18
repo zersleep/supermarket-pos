@@ -40,9 +40,9 @@ export default function TopBar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Store size={20} color="#2563eb" />
           <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-            Metro Supermarket
+            Supermarket POS
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>• Register #01</span>
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>• Register #01</span>
         </div>
 
         {activeShift ? (

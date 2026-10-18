@@ -7,10 +7,10 @@ async function main() {
 
   // 1. Seed Settings
   const settings = [
-    { key: 'STORE_NAME', value: 'Metro Supermarket', description: 'Business display name' },
+    { key: 'STORE_NAME', value: 'Supermarket POS', description: 'Business display name' },
     { key: 'STORE_ADDRESS', value: '123 Monivong Blvd, Phnom Penh, Cambodia', description: 'Store location address' },
     { key: 'STORE_PHONE', value: '+855 23 888 999', description: 'Store contact phone number' },
-    { key: 'RECEIPT_HEADER', value: 'Thank you for shopping at Metro Supermarket!', description: 'Receipt header text' },
+    { key: 'RECEIPT_HEADER', value: 'Thank you for shopping at Supermarket POS!', description: 'Receipt header text' },
     { key: 'RECEIPT_FOOTER', value: 'Goods sold are returnable within 7 days with valid receipt.', description: 'Receipt footer text' },
     { key: 'CURRENCY_CODE', value: 'USD', description: 'Primary currency code (USD or KHR)' },
     { key: 'EXCHANGE_RATE_KHR', value: '4100', description: 'Exchange rate: 1 USD to Cambodian Riel (KHR)' },

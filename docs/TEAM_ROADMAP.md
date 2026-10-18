@@ -1,6 +1,6 @@
-# 🛒 Metro Supermarket POS — Team Guide & Presentation Roadmap
+# 🛒 Supermarket POS — Team Guide & Presentation Roadmap
 
-Welcome to the **Metro Supermarket Point of Sale & Inventory Management System**!  
+Welcome to the **Supermarket POS (Point of Sale & Inventory Management System)**!  
 This document is designed for your school project team. It explains **what the system does**, **why we built it**, **the technologies used**, and **step-by-step instructions for live presentations and exams**.
 
 ---

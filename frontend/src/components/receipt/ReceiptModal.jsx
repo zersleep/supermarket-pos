@@ -7,7 +7,7 @@ export default function ReceiptModal({ isOpen, onClose, saleData, storeInfo }) {
 
   const sale = saleData.sale || saleData;
   const store = storeInfo || saleData.storeInfo || {
-    storeName: 'Metro Supermarket',
+    storeName: 'Supermarket POS',
     storeAddress: '123 Monivong Blvd, Phnom Penh',
     storePhone: '+855 23 888 999',
     receiptHeader: 'Thank you for shopping with us!',

@@ -39,7 +39,7 @@ const PERMISSIONS = {
 };
 
 const DEFAULT_SETTINGS = [
-  { key: 'STORE_NAME', value: 'Metro Supermarket', description: 'Business display name' },
+  { key: 'STORE_NAME', value: 'Supermarket POS', description: 'Business display name' },
   { key: 'STORE_ADDRESS', value: '123 Main Blvd, Phnom Penh, Cambodia', description: 'Store location address' },
   { key: 'STORE_PHONE', value: '+855 23 999 888', description: 'Store contact phone number' },
   { key: 'RECEIPT_HEADER', value: 'Thank you for shopping with us!', description: 'Receipt header text' },

@@ -66,11 +66,11 @@ export default function Sidebar() {
       {/* Brand Header */}
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <ShoppingBag size={20} />
+          <ShoppingCart size={22} />
         </div>
         <div className="sidebar-brand-text">
-          <div className="sidebar-title">Metro POS</div>
-          <div className="sidebar-subtitle">Supermarket Retail</div>
+          <div className="sidebar-title">Supermarket POS</div>
+          <div className="sidebar-subtitle">Retail & Inventory</div>
         </div>
       </div>
 

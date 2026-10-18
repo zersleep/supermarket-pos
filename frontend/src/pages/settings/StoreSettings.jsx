@@ -6,10 +6,10 @@ import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
 
 export default function StoreSettings() {
   const [settings, setSettings] = useState({
-    STORE_NAME: 'Metro Supermarket',
+    STORE_NAME: 'Supermarket POS',
     STORE_ADDRESS: '123 Monivong Blvd, Phnom Penh, Cambodia',
     STORE_PHONE: '+855 23 888 999',
-    RECEIPT_HEADER: 'Thank you for shopping at Metro Supermarket!',
+    RECEIPT_HEADER: 'Thank you for shopping at Supermarket POS!',
     RECEIPT_FOOTER: 'Goods sold are returnable within 7 days with valid receipt.',
     CURRENCY_CODE: 'USD',
     EXCHANGE_RATE_KHR: '4100',

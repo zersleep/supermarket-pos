@@ -116,7 +116,7 @@ async function getSaleById(req, res, next) {
     return sendSuccess(res, {
       sale,
       storeInfo: {
-        storeName: settingsMap.STORE_NAME || 'Metro Supermarket',
+        storeName: settingsMap.STORE_NAME || 'Supermarket POS',
         storeAddress: settingsMap.STORE_ADDRESS || '123 Main Blvd',
         storePhone: settingsMap.STORE_PHONE || '+855 23 999 888',
         receiptHeader: settingsMap.RECEIPT_HEADER || 'Thank you for shopping with us!',

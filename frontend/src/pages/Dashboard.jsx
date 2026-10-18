@@ -87,15 +87,15 @@ export default function Dashboard() {
       <div
         className="card"
         style={{
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          border: '1px solid #334155',
+          background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #3b82f6 100%)',
+          border: '1px solid #60a5fa',
           color: '#ffffff',
           marginBottom: '28px',
           padding: '28px 32px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.4)'
+          boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.3)'
         }}
       >
         <div>
@@ -103,12 +103,12 @@ export default function Dashboard() {
             <span
               className="badge"
               style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                color: '#93c5fd',
-                border: '1px solid rgba(59, 130, 246, 0.4)'
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.3)'
               }}
             >
-              <Store size={12} /> Metro Terminal #01
+              <Store size={12} /> Supermarket Terminal #01
             </span>
             <span
               className="badge"
