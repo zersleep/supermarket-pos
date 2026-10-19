@@ -73,7 +73,6 @@ export default function PosCheckout() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState('');
   const [scanToast, setScanToast] = useState('');
-  const [showDemoBarcodes, setShowDemoBarcodes] = useState(false);
 
   // Modals for Parked Orders & Discounts
   const [holdModalOpen, setHoldModalOpen] = useState(false);
@@ -215,7 +214,7 @@ export default function PosCheckout() {
       }
       if (e.key === 'F2') {
         e.preventDefault();
-        setShowDemoBarcodes((prev) => !prev);
+        setCameraScannerOpen((prev) => !prev);
         return;
       }
       if (e.key === 'F4') {
@@ -596,18 +595,6 @@ export default function PosCheckout() {
     setQrScanStatus('WAITING');
   };
 
-  // Demo products for quick barcode testing
-  const demoBarcodeList = [
-    { name: 'Water', code: '884100100101' },
-    { name: 'Coke', code: '884100100102' },
-    { name: 'Milk', code: '884100100103' },
-    { name: 'Eggs', code: '884100100104' },
-    { name: 'Baguette', code: '884100100105' },
-    { name: 'Rice 5kg', code: '884100100106' },
-    { name: 'Noodles', code: '884100100107' },
-    { name: 'Chips', code: '884100100108' }
-  ];
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Top Header Bar */}
@@ -633,16 +620,6 @@ export default function PosCheckout() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
-            className="btn btn-outline btn-sm"
-            title="Toggle 1-Click Demo Barcode Scanner [F2]"
-            style={{ fontSize: '0.75rem', padding: '5px 10px' }}
-          >
-            <Zap size={13} color="#2563eb" /> {showDemoBarcodes ? 'Hide Barcodes' : 'Quick Barcodes [F2]'}
-          </button>
-
           {parkedOrders.length > 0 && (
             <button
               type="button"
@@ -707,9 +684,10 @@ export default function PosCheckout() {
           )}
 
           {/* Top Controls Bar: Scanner & Search */}
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Spacious Barcode Scanner Input */}
-            <form onSubmit={handleBarcodeSubmit} style={{ flex: 1, minWidth: '280px', position: 'relative' }}>
+          {/* Top Controls Bar: Scanner, Search & Camera */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* 1. Spacious Barcode Scanner Input */}
+            <form onSubmit={handleBarcodeSubmit} style={{ flex: 1, position: 'relative' }}>
               <Barcode
                 size={20}
                 style={{ position: 'absolute', left: '14px', top: '11px', color: '#2563eb' }}
@@ -720,7 +698,7 @@ export default function PosCheckout() {
                 className="form-input"
                 style={{
                   paddingLeft: '44px',
-                  paddingRight: '80px',
+                  paddingRight: '82px',
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   backgroundColor: '#ffffff',
@@ -742,56 +720,14 @@ export default function PosCheckout() {
                   padding: '5px 14px',
                   fontWeight: 700
                 }}
-                title="Scan barcode or trigger live camera"
+                title="Scan barcode or press Enter"
               >
                 Scan
               </button>
             </form>
 
-            {/* Dedicated Camera Viewfinder Button */}
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => setCameraScannerOpen(true)}
-              title="Open Live Camera Barcode Reader"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '9px 14px',
-                fontSize: '0.825rem',
-                fontWeight: 700,
-                color: '#166534',
-                borderColor: '#bbf7d0',
-                backgroundColor: '#f0fdf4'
-              }}
-            >
-              <Camera size={16} color="#16a34a" /> Camera Scan
-            </button>
-
-            {/* Dedicated Quick Test Barcodes Button */}
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
-              title="Toggle Quick Test Barcodes [F2]"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '9px 13px',
-                fontSize: '0.825rem',
-                fontWeight: 700,
-                color: '#1d4ed8',
-                borderColor: showDemoBarcodes ? '#2563eb' : '#bfdbfe',
-                backgroundColor: showDemoBarcodes ? '#eff6ff' : '#ffffff'
-              }}
-            >
-              <Zap size={15} color="#2563eb" /> {showDemoBarcodes ? 'Hide Barcodes' : 'Test Barcodes'}
-            </button>
-
-            {/* Search Filter */}
-            <div style={{ position: 'relative', width: '220px' }}>
+            {/* 2. Search Catalog Filter */}
+            <div style={{ position: 'relative', width: '250px' }}>
               <Search
                 size={17}
                 style={{ position: 'absolute', left: '13px', top: '12px', color: '#64748b' }}
@@ -800,7 +736,7 @@ export default function PosCheckout() {
                 type="text"
                 className="form-input"
                 style={{ paddingLeft: '38px', paddingRight: searchQuery ? '32px' : '12px', fontSize: '0.85rem' }}
-                placeholder="Search items (/)..."
+                placeholder="Search catalog (/)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -822,39 +758,29 @@ export default function PosCheckout() {
                 </button>
               )}
             </div>
-          </div>
 
-          {/* 1-Click Demo Barcodes Strip */}
-          {showDemoBarcodes && (
-            <div
+            {/* 3. Camera Scan Button (Next to Search) */}
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setCameraScannerOpen(true)}
+              title="Open Live Camera Barcode Reader"
               style={{
-                padding: '9px 14px',
-                backgroundColor: '#f8faff',
-                border: '1px solid #bfdbfe',
-                borderRadius: '10px',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap',
-                animation: 'fadeIn 0.2s ease-out'
+                gap: '7px',
+                padding: '9px 16px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: '#166534',
+                borderColor: '#bbf7d0',
+                backgroundColor: '#f0fdf4',
+                whiteSpace: 'nowrap'
               }}
             >
-              <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase' }}>
-                ⚡ 1-Click Scanner:
-              </span>
-              {demoBarcodeList.map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className="btn btn-outline btn-sm mono"
-                  style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px' }}
-                  onClick={() => executeScan(item.code)}
-                >
-                  {item.name} ({item.code.slice(-4)})
-                </button>
-              ))}
-            </div>
-          )}
+              <Camera size={16} color="#16a34a" /> Camera Scan
+            </button>
+          </div>
 
           {/* Scan Success Toast */}
           {scanToast && (
@@ -906,11 +832,16 @@ export default function PosCheckout() {
           <style>{`
             .pos-product-grid {
               display: grid;
-              grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-              gap: 14px;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 16px;
               align-content: start;
             }
-            @media (max-width: 900px) {
+            @media (max-width: 1300px) {
+              .pos-product-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+              }
+            }
+            @media (max-width: 850px) {
               .pos-product-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
               }
@@ -918,7 +849,7 @@ export default function PosCheckout() {
             .pos-product-card-title {
               font-family: var(--font-display);
               font-weight: 700;
-              font-size: 0.92rem;
+              font-size: 0.95rem;
               color: #0f172a;
               line-height: 1.35;
               min-height: 2.7em;
@@ -928,7 +859,7 @@ export default function PosCheckout() {
               display: -webkit-box;
               -webkit-line-clamp: 2;
               -webkit-box-orient: vertical;
-              margin-top: 10px;
+              margin-top: 12px;
               margin-bottom: 6px;
               word-break: break-word;
             }
@@ -969,7 +900,7 @@ export default function PosCheckout() {
                     }}
                     style={{
                       border: '1.5px solid #e2e8f0',
-                      borderRadius: '12px',
+                      borderRadius: '14px',
                       overflow: 'hidden',
                       backgroundColor: '#ffffff',
                       display: 'flex',
@@ -977,35 +908,37 @@ export default function PosCheckout() {
                       cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                       opacity: isOutOfStock ? 0.6 : 1,
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
                       userSelect: 'none',
-                      padding: '12px'
+                      padding: '14px',
+                      minHeight: '370px'
                     }}
                     onMouseEnter={(e) => {
                       if (!isOutOfStock) {
                         e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 18px rgba(37, 99, 235, 0.14)';
+                        e.currentTarget.style.transform = 'translateY(-3px)';
+                        e.currentTarget.style.boxShadow = '0 10px 22px rgba(37, 99, 235, 0.15)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.04)';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.04)';
                     }}
                   >
-                    {/* Picture Display inside Product Card Box */}
+                    {/* Picture Display inside Product Card Box - Taller for Clear Visibility */}
                     <div
                       style={{
-                        height: '145px',
+                        height: '190px',
+                        minHeight: '190px',
                         width: '100%',
                         backgroundColor: '#f8fafc',
-                        borderRadius: '10px',
-                        border: '1px solid #f1f5f9',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '10px',
+                        padding: '12px',
                         overflow: 'hidden',
                         position: 'relative'
                       }}
@@ -1029,7 +962,7 @@ export default function PosCheckout() {
                         }}
                         loading="eager"
                         onMouseEnter={(e) => {
-                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.05)';
+                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.06)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'scale(1)';
@@ -1037,7 +970,7 @@ export default function PosCheckout() {
                       />
                     </div>
 
-                    {/* Product Name - Always Visible */}
+                    {/* Product Name - Always Visible & Bold */}
                     <div
                       className="pos-product-card-title"
                       title={p.name}
@@ -1049,28 +982,28 @@ export default function PosCheckout() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
                       <span
                         style={{
-                          fontSize: '0.675rem',
+                          fontSize: '0.7rem',
                           fontWeight: 700,
                           backgroundColor: '#eff6ff',
                           color: '#1d4ed8',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
+                          padding: '2px 7px',
+                          borderRadius: '5px',
                           border: '1px solid #bfdbfe'
                         }}
-                        className="mono"
+                        className="currency-amount"
                       >
                         ID: {p.sku}
                       </span>
                       {p.barcode && (
                         <span
                           style={{
-                            fontSize: '0.675rem',
+                            fontSize: '0.7rem',
                             color: '#64748b',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '3px'
                           }}
-                          className="mono"
+                          className="currency-amount"
                         >
                           <Barcode size={10} /> {p.barcode}
                         </span>
@@ -1078,8 +1011,8 @@ export default function PosCheckout() {
                     </div>
 
                     {/* Category & Stock Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', marginBottom: '8px' }}>
-                      <span style={{ color: '#64748b', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '10px' }}>
+                      <span style={{ color: '#475569', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '5px', fontWeight: 600 }}>
                         {p.category?.name || 'General'}
                       </span>
                       <span
@@ -1093,8 +1026,8 @@ export default function PosCheckout() {
                       >
                         <span
                           style={{
-                            width: '5px',
-                            height: '5px',
+                            width: '6px',
+                            height: '6px',
                             borderRadius: '50%',
                             backgroundColor: isOutOfStock ? '#dc2626' : p.isLowStock ? '#f59e0b' : '#16a34a',
                             display: 'inline-block'
@@ -1108,7 +1041,7 @@ export default function PosCheckout() {
                     <div
                       style={{
                         marginTop: 'auto',
-                        paddingTop: '8px',
+                        paddingTop: '10px',
                         borderTop: '1px solid #f1f5f9',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -1116,10 +1049,10 @@ export default function PosCheckout() {
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
                           ${Number(p.sellingPrice).toFixed(2)}
                         </div>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginTop: '2px' }} className="currency-amount">
+                        <div style={{ fontSize: '0.725rem', fontWeight: 700, color: '#64748b', marginTop: '3px' }} className="currency-amount">
                           {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
                         </div>
                       </div>
@@ -1128,13 +1061,13 @@ export default function PosCheckout() {
                         type="button"
                         className="btn btn-sm"
                         style={{
-                          padding: '5px 12px',
-                          fontSize: '0.75rem',
+                          padding: '6px 14px',
+                          fontSize: '0.78rem',
                           fontWeight: 700,
                           color: isOutOfStock ? '#94a3b8' : '#1d4ed8',
                           borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
                           backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
-                          borderRadius: '6px',
+                          borderRadius: '7px',
                           border: '1px solid',
                           cursor: isOutOfStock ? 'not-allowed' : 'pointer'
                         }}

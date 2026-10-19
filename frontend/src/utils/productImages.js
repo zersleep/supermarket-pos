@@ -75,18 +75,18 @@ export function getProductSvgPlaceholder(product) {
     label = 'Household Care';
   }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="280" viewBox="0 0 400 280">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stop-color="${bgColor1}" stop-opacity="0.14"/>
         <stop offset="100%" stop-color="${bgColor2}" stop-opacity="0.28"/>
       </linearGradient>
     </defs>
-    <rect width="100%" height="100%" rx="12" fill="url(#bg)"/>
-    <rect x="1" y="1" width="298" height="198" rx="11" fill="none" stroke="${bgColor1}" stroke-opacity="0.35" stroke-width="1.5"/>
-    <text x="50%" y="42%" text-anchor="middle" font-size="44">${iconEmoji}</text>
-    <text x="50%" y="68%" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="700" font-size="13" fill="${bgColor2}">${label}</text>
-    <text x="50%" y="84%" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="600" font-size="11" fill="#475569">SKU: ${sku}</text>
+    <rect width="100%" height="100%" rx="14" fill="url(#bg)"/>
+    <rect x="2" y="2" width="396" height="276" rx="12" fill="none" stroke="${bgColor1}" stroke-opacity="0.35" stroke-width="2"/>
+    <text x="50%" y="42%" text-anchor="middle" font-size="56">${iconEmoji}</text>
+    <text x="50%" y="68%" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="700" font-size="16" fill="${bgColor2}">${label}</text>
+    <text x="50%" y="84%" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="600" font-size="13" fill="#475569">SKU: ${sku}</text>
   </svg>`;
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
