@@ -122,14 +122,22 @@ async function getProductByBarcode(req, res, next) {
       return sendError(res, 'Barcode is required.', 400);
     }
 
-    // Check primary product barcode or secondary aliases
+    const trimmed = barcode.trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+    const orConditions = [
+      { barcode: { equals: trimmed, mode: 'insensitive' } },
+      { sku: { equals: trimmed, mode: 'insensitive' } },
+      { barcodes: { some: { barcode: { equals: trimmed, mode: 'insensitive' } } } }
+    ];
+    if (isUuid) {
+      orConditions.push({ id: trimmed });
+    }
+
+    // Check primary product barcode, SKU, or secondary aliases
     const product = await prisma.product.findFirst({
       where: {
         isActive: true,
-        OR: [
-          { barcode: barcode.trim() },
-          { barcodes: { some: { barcode: barcode.trim() } } }
-        ]
+        OR: orConditions
       },
       include: {
         category: { select: { id: true, name: true } },

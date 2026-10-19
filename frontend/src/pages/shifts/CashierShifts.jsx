@@ -248,78 +248,47 @@ export default function CashierShifts() {
       <Alert type="danger" message={error} onClose={() => setError('')} />
       <Alert type="success" message={success} onClose={() => setSuccess('')} />
 
-      {/* Visual 4-Step Shift Lifecycle Workflow Guide */}
+      {/* Sleek Shift Lifecycle Guide */}
       <div
         className="card"
         style={{
-          padding: '16px 20px',
-          marginBottom: '22px',
+          padding: '14px 20px',
+          marginBottom: '20px',
           backgroundColor: '#ffffff',
-          border: '1.5px solid #e2e8f0'
+          border: '1px solid #e2e8f0',
+          boxShadow: 'var(--shadow-xs)'
         }}
       >
-        <div
-          style={{
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            color: '#1e40af',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <Clock size={16} /> Cashier Shift & Drawer Reconciliation Workflow
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={14} color="#2563eb" /> Cashier Shift & Drawer Balancing Procedure
+          </div>
+          <span style={{ fontSize: '0.725rem', color: '#64748b' }}>4-Step Standard Procedure</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-              1
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>Open Register & Float</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                Declare starting cash drawer balance (e.g. $50.00) at shift start.
-              </div>
-            </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+          <div style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563eb', marginBottom: '2px' }}>STEP 1 • OPEN REGISTER</div>
+            <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0f172a' }}>Declare Float ($50)</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>Starting drawer balance</div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-              2
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e40af' }}>Checkout Sales</div>
-              <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '2px' }}>
-                Cash & KHQR sales accumulate. Drawer cash-in / drops audited in real time.
-              </div>
-            </div>
+          <div style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563eb', marginBottom: '2px' }}>STEP 2 • LIVE SALES</div>
+            <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0f172a' }}>Process Checkout</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>Cash & QR auto-audited</div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#fef3c7', borderRadius: '10px', border: '1px solid #fde68a' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#d97706', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-              3
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#92400e' }}>Count Physical Cash</div>
-              <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '2px' }}>
-                Cashier counts cash & coins in drawer at shift end (built-in bill calculator).
-              </div>
-            </div>
+          <div style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#d97706', marginBottom: '2px' }}>STEP 3 • END OF SHIFT</div>
+            <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0f172a' }}>Physical Cash Count</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>Count drawer bills & coins</div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#ecfdf5', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-              4
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#047857' }}>Reconcile & Z-Report</div>
-              <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '2px' }}>
-                System computes cash variance (Balanced/Surplus/Short) & prints official Z-Report.
-              </div>
-            </div>
+          <div style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', marginBottom: '2px' }}>STEP 4 • CLOSE & AUDIT</div>
+            <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0f172a' }}>Print Z-Report</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>Auto variance reconciliation</div>
           </div>
         </div>
       </div>
@@ -403,18 +372,34 @@ export default function CashierShifts() {
             padding: '36px 20px',
             textAlign: 'center',
             marginBottom: '26px',
-            backgroundColor: '#f0f9ff',
-            border: '1.5px dashed #93c5fd',
-            borderRadius: '16px'
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '16px',
+            boxShadow: 'var(--shadow-sm)'
           }}
         >
-          <Clock size={44} color="#2563eb" style={{ margin: '0 auto 12px auto' }} />
-          <h3 style={{ color: '#1e3a8a', fontWeight: 800, fontSize: '1.2rem' }}>No Active Register Shift</h3>
-          <p style={{ color: '#3b82f6', fontSize: '0.875rem', marginTop: '4px', marginBottom: '18px', maxWidth: '520px', margin: '4px auto 18px auto' }}>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#eff6ff',
+              color: '#2563eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 14px auto',
+              border: '1px solid #bfdbfe'
+            }}
+          >
+            <Clock size={28} />
+          </div>
+          <h3 style={{ color: '#0f172a', fontWeight: 800, fontSize: '1.2rem' }}>No Active Register Shift</h3>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '4px', marginBottom: '18px', maxWidth: '500px', margin: '4px auto 18px auto' }}>
             Open a cashier shift to record your starting drawer float. All completed sales and cash movements will be automatically reconciled.
           </p>
-          <button onClick={() => setOpenModalVisible(true)} className="btn btn-primary btn-lg" style={{ padding: '10px 24px' }}>
-            <Clock size={18} /> Open Shift Now
+          <button onClick={() => setOpenModalVisible(true)} className="btn btn-primary" style={{ padding: '10px 24px', fontWeight: 700 }}>
+            <Clock size={16} /> Open Shift Now
           </button>
         </div>
       )}

@@ -21,14 +21,13 @@ import {
   PlayCircle,
   Tag,
   Keyboard,
-  Receipt,
-  Boxes
+  Receipt
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { usePos } from '../../context/PosContext';
 import { useAuth } from '../../context/AuthContext';
-import { LoadingSpinner, Alert, StatCard } from '../../components/common/LoadingSpinner';
+import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
 import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
 import {
@@ -132,62 +131,120 @@ export default function PosCheckout() {
   }, [setExchangeRate]);
 
   // Global Keyboard Shortcuts for Cashier
+  // Global Keyboard Shortcuts & Hardware Barcode Scanner Listener
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Don't intercept if inside an input or textarea unless it is a specific Function key
-      const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+    let scanBuffer = '';
+    let lastKeyTime = Date.now();
 
+    const handleKeyDown = (e) => {
+      const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+      const isBarcodeInput = e.target === barcodeRef.current;
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyTime;
+      lastKeyTime = currentTime;
+
+      // Handle function shortcuts
       if (e.key === 'F1') {
         e.preventDefault();
         barcodeRef.current?.focus();
-      } else if (e.key === 'F2') {
+        barcodeRef.current?.select();
+        return;
+      }
+      if (e.key === 'F2') {
         e.preventDefault();
         setShowDemoBarcodes((prev) => !prev);
-      } else if (e.key === 'F4') {
+        return;
+      }
+      if (e.key === 'F4') {
         e.preventDefault();
         if (cart.length > 0) {
           setHoldNoteInput(`Customer Hold #${parkedOrders.length + 1}`);
           setHoldModalOpen(true);
         }
-      } else if (e.key === 'F8') {
+        return;
+      }
+      if (e.key === 'F8') {
         e.preventDefault();
         setPaymentMethod('CASH');
-      } else if (e.key === 'F9') {
+        return;
+      }
+      if (e.key === 'F9') {
         e.preventDefault();
         setPaymentMethod('QR_PAYMENT');
-      } else if (e.key === 'Escape') {
+        return;
+      }
+      if (e.key === 'Escape') {
         setHoldModalOpen(false);
         setParkedListModalOpen(false);
         setDiscountModalItem(null);
         setQrModalOpen(false);
         setSearchQuery('');
-      } else if (e.key === '/' && !isInput) {
+        return;
+      }
+      if (e.key === '/' && !isInput) {
         e.preventDefault();
         barcodeRef.current?.focus();
+        return;
+      }
+
+      // Enter key detection (either in barcode field or from hardware scanner gun)
+      if (e.key === 'Enter') {
+        if (isBarcodeInput) {
+          e.preventDefault();
+          executeScan(barcodeInput);
+          scanBuffer = '';
+          return;
+        }
+
+        // If hardware scanner buffer was filled rapidly (< 150ms) and completed with Enter
+        if (scanBuffer.length >= 3 && timeDiff < 150) {
+          e.preventDefault();
+          executeScan(scanBuffer);
+          scanBuffer = '';
+          return;
+        }
+        scanBuffer = '';
+        return;
+      }
+
+      // Hardware Scanner character buffering
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (timeDiff > 150) {
+          scanBuffer = ''; // Reset buffer if typed slowly by human
+        }
+        scanBuffer += e.key;
+
+        // If focus was lost outside input, automatically redirect focus to barcode input
+        if (!isInput) {
+          barcodeRef.current?.focus();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, parkedOrders.length]);
+  }, [cart, parkedOrders.length, products, barcodeInput]);
 
-  // Robust Barcode Scanner Lookup
+  // Robust Barcode Scanner Lookup (Hardware Scanner + Manual Entry + Demo Buttons)
   const executeScan = async (codeToScan) => {
-    const code = (codeToScan || barcodeInput).trim();
+    const raw = codeToScan !== undefined ? codeToScan : barcodeInput;
+    const code = String(raw || '').replace(/[\r\n\t]/g, '').trim();
     if (!code) return;
 
     setError('');
+    const cleanCode = code.toLowerCase();
 
-    // 1. Check in-memory loaded products first
-    const localMatch = products.find(
-      (p) =>
-        (p.barcode && p.barcode.trim() === code) ||
-        (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
-        (p.name && p.name.toLowerCase() === code.toLowerCase())
-    );
+    // 1. Check in-memory loaded products first (check barcode, sku, extra barcodes, or exact name)
+    const localMatch = products.find((p) => {
+      const pBarcode = (p.barcode || '').trim().toLowerCase();
+      const pSku = (p.sku || '').trim().toLowerCase();
+      const pName = (p.name || '').trim().toLowerCase();
+      const hasExtra = Array.isArray(p.barcodes) && p.barcodes.some((b) => (b.barcode || '').trim().toLowerCase() === cleanCode);
+      return pBarcode === cleanCode || pSku === cleanCode || pName === cleanCode || hasExtra;
+    });
 
     if (localMatch) {
-      if (localMatch.currentStock <= 0) {
+      if (Number(localMatch.currentStock) <= 0) {
         playErrorTone();
         setError(`"${localMatch.name}" is currently out of stock.`);
         return;
@@ -195,35 +252,42 @@ export default function PosCheckout() {
       playScannerBeep();
       addToCart(localMatch, 1);
       setBarcodeInput('');
-      setScanToast(`✓ Scanned: ${localMatch.name}`);
+      setScanToast(`✓ Scanned: ${localMatch.name} ($${Number(localMatch.sellingPrice).toFixed(2)})`);
       setTimeout(() => setScanToast(''), 2500);
+      barcodeRef.current?.focus();
       return;
     }
 
-    // 2. Fetch from backend if not yet in memory
+    // 2. Fetch from backend if not yet in memory or new product
     try {
       const res = await api.get(`/products/barcode/${encodeURIComponent(code)}`);
-      if (res.data) {
-        if (res.data.currentStock <= 0) {
+      const prod = res.data;
+      if (prod) {
+        if (Number(prod.currentStock) <= 0) {
           playErrorTone();
-          setError(`"${res.data.name}" is currently out of stock.`);
+          setError(`"${prod.name}" is currently out of stock.`);
         } else {
           playScannerBeep();
-          addToCart(res.data, 1);
+          addToCart(prod, 1);
           setBarcodeInput('');
-          setScanToast(`✓ Scanned: ${res.data.name}`);
+          setScanToast(`✓ Scanned: ${prod.name} ($${Number(prod.sellingPrice).toFixed(2)})`);
           setTimeout(() => setScanToast(''), 2500);
         }
+      } else {
+        playErrorTone();
+        setError(`No product found matching barcode or SKU "${code}"`);
       }
     } catch (err) {
       playErrorTone();
-      setError(err.message || `No product found matching barcode "${code}"`);
+      setError(err.message || `No product found matching barcode or SKU "${code}"`);
+    } finally {
+      barcodeRef.current?.focus();
     }
   };
 
   const handleBarcodeSubmit = (e) => {
     e.preventDefault();
-    executeScan();
+    executeScan(barcodeInput);
   };
 
   // Filter products by category and search term
@@ -456,27 +520,26 @@ export default function PosCheckout() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Top Page Header (Visual Parity with Manager & Owner) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Checkout Register</h1>
-            <span className="badge badge-primary">Register #01</span>
-            {activeShift ? (
-              <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                Shift Active ({user?.fullName || user?.username})
-              </span>
-            ) : (
-              <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                Shift Closed
-              </span>
-            )}
-          </div>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '3px', margin: 0 }}>
-            Real-time barcode scanning, automated KHQR payment detection, FEFO inventory batches, and receipt printing
-          </p>
+      {/* Top Header Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+            Checkout Register
+          </h1>
+          <span className="badge badge-primary" style={{ padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700 }}>
+            Register #01
+          </span>
+          {activeShift ? (
+            <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', fontSize: '0.75rem' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+              Shift Open ({user?.fullName || user?.username})
+            </span>
+          ) : (
+            <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', fontSize: '0.75rem' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+              Shift Closed
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -485,9 +548,9 @@ export default function PosCheckout() {
             onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
             className="btn btn-outline btn-sm"
             title="Toggle 1-Click Demo Barcode Scanner [F2]"
-            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+            style={{ fontSize: '0.75rem', padding: '5px 10px' }}
           >
-            <Zap size={14} color="#2563eb" /> {showDemoBarcodes ? 'Hide Barcodes' : 'Demo Barcodes [F2]'}
+            <Zap size={13} color="#2563eb" /> {showDemoBarcodes ? 'Hide Barcodes' : 'Quick Barcodes [F2]'}
           </button>
 
           {parkedOrders.length > 0 && (
@@ -499,12 +562,12 @@ export default function PosCheckout() {
                 backgroundColor: '#fef3c7',
                 color: '#92400e',
                 border: '1px solid #fde68a',
-                padding: '6px 12px',
+                padding: '5px 10px',
                 fontSize: '0.75rem',
                 fontWeight: 700
               }}
             >
-              <PauseCircle size={14} /> Parked Orders ({parkedOrders.length})
+              <PauseCircle size={13} /> Parked Orders ({parkedOrders.length})
             </button>
           )}
 
@@ -512,47 +575,15 @@ export default function PosCheckout() {
             type="button"
             onClick={() => navigate('/shifts')}
             className="btn btn-outline btn-sm"
-            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+            style={{ fontSize: '0.75rem', padding: '5px 10px' }}
           >
-            <Clock size={14} /> Shifts & Drawer
+            <Clock size={13} /> Shift Details
           </button>
         </div>
       </div>
 
-      {/* Top Register KPI Strip */}
-      <div className="grid-4">
-        <StatCard
-          title="Drawer Cash Float"
-          value={`$${activeShift ? Number(activeShift.openingCash).toFixed(2) : '0.00'}`}
-          subtitle={activeShift ? 'Starting drawer float' : 'Open shift to initialize'}
-          icon={DollarSign}
-          color="#2563eb"
-        />
-        <StatCard
-          title="Shift Cash Sales"
-          value={`$${activeShift ? Number(activeShift.cashSalesTotal).toFixed(2) : '0.00'}`}
-          subtitle={`${activeShift?._count?.sales || 0} orders processed`}
-          icon={CheckCircle2}
-          color="#10b981"
-        />
-        <StatCard
-          title="Catalog Stock"
-          value={`${products.length} Items`}
-          subtitle={`${products.filter((p) => p.currentStock > 0).length} in stock ready to scan`}
-          icon={Boxes}
-          color="#8b5cf6"
-        />
-        <StatCard
-          title="Parked Carts"
-          value={`${parkedOrders.length} On Hold`}
-          subtitle={parkedOrders.length > 0 ? 'Click to resume customer' : 'No carts on hold'}
-          icon={PauseCircle}
-          color="#f59e0b"
-        />
-      </div>
-
       {/* Main POS Interface (Left: Catalog, Right: Cart) */}
-      <div style={{ display: 'flex', gap: '20px', minHeight: '620px', height: 'calc(100vh - 295px)' }}>
+      <div style={{ display: 'flex', gap: '20px', minHeight: '600px', height: 'calc(100vh - 165px)' }}>
         {/* LEFT PANEL: Catalog, Barcode Scanner, & Category Filters */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'hidden' }}>
           
@@ -820,32 +851,36 @@ export default function PosCheckout() {
                       e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
                     }}
                   >
-                    {/* Fixed 135px Product Picture Container */}
+                    {/* Full Product Picture Container (100% Uncropped) */}
                     <div
                       style={{
-                        height: '135px',
+                        height: '145px',
                         width: '100%',
                         position: 'relative',
-                        overflow: 'hidden',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: '#ffffff',
                         borderBottom: '1px solid #f1f5f9',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        padding: '10px 12px'
                       }}
                     >
                       <img
                         src={imgUrl}
                         alt={p.name}
                         style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          width: 'auto',
+                          height: 'auto',
+                          objectFit: 'contain',
+                          display: 'block',
+                          margin: '0 auto',
+                          transition: 'transform 0.25s ease'
                         }}
                         loading="lazy"
                         onMouseEnter={(e) => {
-                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.05)';
+                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.06)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'scale(1)';
@@ -962,25 +997,26 @@ export default function PosCheckout() {
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2563eb' }} className="mono">
+                          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1d4ed8', letterSpacing: '-0.02em', lineHeight: 1.1 }} className="mono">
                             ${Number(p.sellingPrice).toFixed(2)}
                           </div>
-                          <div style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b' }}>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginTop: '2px' }} className="mono">
                             {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
                           </div>
                         </div>
 
                         <button
                           type="button"
-                          className="btn btn-outline btn-sm"
+                          className="btn btn-sm"
                           style={{
-                            padding: '3px 8px',
-                            fontSize: '0.725rem',
-                            fontWeight: 600,
+                            padding: '4px 10px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
                             color: isOutOfStock ? '#94a3b8' : '#2563eb',
                             borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
                             backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
-                            borderRadius: '6px'
+                            borderRadius: '8px',
+                            border: '1px solid'
                           }}
                           disabled={isOutOfStock}
                         >
