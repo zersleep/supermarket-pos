@@ -84,10 +84,6 @@ export default function PosCheckout() {
   const [holdNoteInput, setHoldNoteInput] = useState('');
   const [parkedListModalOpen, setParkedListModalOpen] = useState(false);
 
-  // Custom whole-cart discount modal state
-  const [cartDiscountModalOpen, setCartDiscountModalOpen] = useState(false);
-  const [customCartDiscountType, setCustomCartDiscountType] = useState('PERCENT'); // 'PERCENT' or 'FIXED'
-  const [customCartDiscountValue, setCustomCartDiscountValue] = useState('');
 
   // Custom exchange rate modal state
   const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
@@ -456,25 +452,37 @@ export default function PosCheckout() {
   // Handle Line Item Discount Open & Save
   const openDiscountModal = (item) => {
     setDiscountModalItem(item);
-    setDiscountType('FIXED');
-    setDiscountValueInput(item.discount > 0 ? String(item.discount) : '');
+    if (item.discountPercent > 0) {
+      setDiscountType('PERCENT');
+      setDiscountValueInput(String(item.discountPercent));
+    } else if (item.discount > 0) {
+      setDiscountType('FIXED');
+      setDiscountValueInput(String(item.discount));
+    } else {
+      setDiscountType('PERCENT');
+      setDiscountValueInput('');
+    }
   };
 
   const handleApplyDiscount = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!discountModalItem) return;
 
     const val = Number(discountValueInput) || 0;
-    let computedDiscount = 0;
+    if (val <= 0) {
+      updateDiscount(discountModalItem.product.id, 0, 0);
+      setDiscountModalItem(null);
+      return;
+    }
 
     if (discountType === 'PERCENT') {
       const lineSubtotal = discountModalItem.quantity * Number(discountModalItem.product.sellingPrice);
-      computedDiscount = Math.round(((lineSubtotal * Math.min(100, Math.max(0, val))) / 100) * 100) / 100;
+      const computedDiscount = Math.round(((lineSubtotal * Math.min(100, Math.max(0, val))) / 100) * 100) / 100;
+      updateDiscount(discountModalItem.product.id, computedDiscount, val);
     } else {
-      computedDiscount = val;
+      updateDiscount(discountModalItem.product.id, val, null);
     }
 
-    updateDiscount(discountModalItem.product.id, computedDiscount);
     setDiscountModalItem(null);
   };
 
@@ -501,29 +509,12 @@ export default function PosCheckout() {
     const idempotencyKey = `pos-tx-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     try {
-      // Proportionally distribute whole-cart discount across items for authoritative backend line-item totals
-      let remainingCartDisc = cartDiscountAmount;
-      const itemsPayload = cart.map((i, idx) => {
-        const itemGross = i.quantity * Number(i.product.sellingPrice);
-        let itemExtraDisc = 0;
-        if (cartDiscountAmount > 0 && subtotal > 0) {
-          if (idx === cart.length - 1) {
-            itemExtraDisc = Math.max(0, remainingCartDisc);
-          } else {
-            itemExtraDisc = Math.round(((itemGross / subtotal) * cartDiscountAmount) * 100) / 100;
-            remainingCartDisc = Math.max(0, remainingCartDisc - itemExtraDisc);
-          }
-        }
-        const finalItemDisc = Math.min(itemGross, Math.round(((Number(i.discount) || 0) + itemExtraDisc) * 100) / 100);
-        return {
+      const payload = {
+        items: cart.map((i) => ({
           productId: i.product.id,
           quantity: i.quantity,
-          discount: finalItemDisc
-        };
-      });
-
-      const payload = {
-        items: itemsPayload,
+          discount: Number(i.discount) || 0
+        })),
         paymentMethod,
         currency,
         cashReceived: paymentMethod === 'CASH' ? numericCash : undefined,
@@ -880,17 +871,16 @@ export default function PosCheckout() {
             .pos-product-card-title {
               font-family: var(--font-display);
               font-weight: 700;
-              font-size: 0.875rem;
+              font-size: 0.825rem;
               color: #0f172a;
-              line-height: 1.3;
-              min-height: 2.6em;
-              max-height: 2.6em;
+              line-height: 1.25;
+              height: 2.5em;
               overflow: hidden;
               text-overflow: ellipsis;
               display: -webkit-box;
               -webkit-line-clamp: 2;
               -webkit-box-orient: vertical;
-              margin-top: 8px;
+              margin-top: 6px;
               margin-bottom: 4px;
               word-break: break-word;
             }
@@ -931,7 +921,7 @@ export default function PosCheckout() {
                     }}
                     style={{
                       border: '1.5px solid #e2e8f0',
-                      borderRadius: '12px',
+                      borderRadius: '10px',
                       overflow: 'hidden',
                       backgroundColor: '#ffffff',
                       display: 'flex',
@@ -939,37 +929,37 @@ export default function PosCheckout() {
                       cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                       opacity: isOutOfStock ? 0.6 : 1,
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.04)',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
                       userSelect: 'none',
-                      padding: '11px',
-                      minHeight: '265px'
+                      padding: '10px',
+                      minHeight: '220px'
                     }}
                     onMouseEnter={(e) => {
                       if (!isOutOfStock) {
                         e.currentTarget.style.borderColor = '#2563eb';
                         e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 18px rgba(37, 99, 235, 0.12)';
+                        e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.12)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.04)';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.04)';
                     }}
                   >
-                    {/* Picture Display inside Product Card Box - Compact & Balanced */}
+                    {/* Picture Display inside Product Card Box - Compact, Clean & White Background */}
                     <div
                       style={{
-                        height: '120px',
-                        minHeight: '120px',
+                        height: '84px',
+                        minHeight: '84px',
                         width: '100%',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '10px',
-                        border: '1px solid #e2e8f0',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '8px',
+                        border: '1px solid #f1f5f9',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '6px',
+                        padding: '4px',
                         overflow: 'hidden',
                         position: 'relative'
                       }}
@@ -989,6 +979,7 @@ export default function PosCheckout() {
                           objectFit: 'contain',
                           display: 'block',
                           margin: '0 auto',
+                          backgroundColor: 'transparent',
                           transition: 'transform 0.25s ease'
                         }}
                         loading="eager"
@@ -1001,7 +992,7 @@ export default function PosCheckout() {
                       />
                     </div>
 
-                    {/* Product Name - Always Visible & Compact */}
+                    {/* Product Name - Strictly 2-Line Clamped to Prevent Overlays */}
                     <div
                       className="pos-product-card-title"
                       title={p.name}
@@ -1009,17 +1000,18 @@ export default function PosCheckout() {
                       {p.name || p.sku || 'Unnamed Product'}
                     </div>
 
-                    {/* Product ID & Barcode */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', flexWrap: 'wrap' }}>
+                    {/* Product ID & Barcode - Single-Line to Prevent Uneven Heights */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       <span
                         style={{
-                          fontSize: '0.7rem',
+                          fontSize: '0.675rem',
                           fontWeight: 700,
                           backgroundColor: '#eff6ff',
                           color: '#1d4ed8',
-                          padding: '1px 6px',
-                          borderRadius: '5px',
-                          border: '1px solid #bfdbfe'
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          border: '1px solid #bfdbfe',
+                          flexShrink: 0
                         }}
                         className="currency-amount"
                       >
@@ -1028,22 +1020,26 @@ export default function PosCheckout() {
                       {p.barcode && (
                         <span
                           style={{
-                            fontSize: '0.7rem',
+                            fontSize: '0.675rem',
                             color: '#64748b',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '3px'
+                            gap: '2px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
                           }}
                           className="currency-amount"
+                          title={p.barcode}
                         >
-                          <Barcode size={10} /> {p.barcode}
+                          <Barcode size={10} style={{ flexShrink: 0 }} /> {p.barcode}
                         </span>
                       )}
                     </div>
 
                     {/* Category & Stock Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '6px' }}>
-                      <span style={{ color: '#475569', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', marginBottom: '4px' }}>
+                      <span style={{ color: '#475569', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
                         {p.category?.name || 'General'}
                       </span>
                       <span
@@ -1052,13 +1048,14 @@ export default function PosCheckout() {
                           color: isOutOfStock ? '#dc2626' : p.isLowStock ? '#d97706' : '#16a34a',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '3px',
+                          flexShrink: 0
                         }}
                       >
                         <span
                           style={{
-                            width: '6px',
-                            height: '6px',
+                            width: '5px',
+                            height: '5px',
                             borderRadius: '50%',
                             backgroundColor: isOutOfStock ? '#dc2626' : p.isLowStock ? '#f59e0b' : '#16a34a',
                             display: 'inline-block'
@@ -1080,10 +1077,10 @@ export default function PosCheckout() {
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
                           ${Number(p.sellingPrice).toFixed(2)}
                         </div>
-                        <div style={{ fontSize: '0.725rem', fontWeight: 700, color: '#64748b', marginTop: '3px' }} className="currency-amount">
+                        <div style={{ fontSize: '0.675rem', fontWeight: 700, color: '#64748b', marginTop: '2px' }} className="currency-amount">
                           {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
                         </div>
                       </div>
@@ -1092,13 +1089,13 @@ export default function PosCheckout() {
                         type="button"
                         className="btn btn-sm"
                         style={{
-                          padding: '6px 14px',
-                          fontSize: '0.78rem',
+                          padding: '4px 11px',
+                          fontSize: '0.75rem',
                           fontWeight: 700,
                           color: isOutOfStock ? '#94a3b8' : '#1d4ed8',
                           borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
                           backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
-                          borderRadius: '7px',
+                          borderRadius: '6px',
                           border: '1px solid',
                           cursor: isOutOfStock ? 'not-allowed' : 'pointer'
                         }}
@@ -1121,16 +1118,17 @@ export default function PosCheckout() {
             width: '430px',
             display: 'flex',
             flexDirection: 'column',
-            padding: '18px',
+            padding: '16px',
             backgroundColor: '#ffffff',
             boxShadow: 'var(--shadow-md)',
             borderRadius: 'var(--radius-xl)',
-            border: '1.5px solid #e2e8f0'
+            border: '1.5px solid #e2e8f0',
+            overflow: 'hidden'
           }}
         >
-          {/* Cart Header with Parked Orders Badge */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Cart Header with Parked Orders Badge & Compact Exchange Rate */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontWeight: 800, fontSize: '1.15rem', color: '#0f172a' }}>Order Cart</span>
               <span
                 style={{
@@ -1145,10 +1143,33 @@ export default function PosCheckout() {
               >
                 {cart.reduce((sum, i) => sum + i.quantity, 0)} items
               </span>
+
+              {/* Compact Clickable Exchange Rate Chip */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomRateInput(exchangeRate.toString());
+                  setExchangeModalOpen(true);
+                }}
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#f8fafc',
+                  color: '#1e40af',
+                  border: '1px solid #cbd5e1',
+                  padding: '2px 7px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+                title="Click to view/change USD to KHR Exchange Rate"
+              >
+                $1 = {exchangeRate.toLocaleString()} ៛ ✎
+              </button>
             </div>
 
             {/* Quick Header Actions: Parked List & Hold Cart */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               {parkedOrders.length > 0 && (
                 <button
                   type="button"
@@ -1158,13 +1179,13 @@ export default function PosCheckout() {
                     backgroundColor: '#fef3c7',
                     color: '#92400e',
                     border: '1px solid #fde68a',
-                    padding: '3px 8px',
-                    fontSize: '0.725rem',
+                    padding: '3px 7px',
+                    fontSize: '0.7rem',
                     fontWeight: 700
                   }}
                   title="View parked orders on hold"
                 >
-                  <PauseCircle size={13} /> Parked ({parkedOrders.length})
+                  <PauseCircle size={12} /> Parked ({parkedOrders.length})
                 </button>
               )}
 
@@ -1180,43 +1201,44 @@ export default function PosCheckout() {
                     style={{
                       color: '#475569',
                       borderColor: '#cbd5e1',
-                      padding: '3px 8px',
-                      fontSize: '0.725rem'
+                      padding: '3px 7px',
+                      fontSize: '0.7rem'
                     }}
                     title="Park / Hold current cart [F4]"
                   >
-                    <PauseCircle size={13} /> Hold [F4]
+                    <PauseCircle size={12} /> Hold [F4]
                   </button>
 
                   <button
                     onClick={clearCart}
                     className="btn btn-outline btn-sm"
-                    style={{ color: '#ef4444', borderColor: '#fecaca', padding: '3px 7px', fontSize: '0.725rem' }}
+                    style={{ color: '#ef4444', borderColor: '#fecaca', padding: '3px 6px', fontSize: '0.7rem' }}
                     title="Clear shopping cart"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={12} />
                   </button>
                 </>
               )}
             </div>
           </div>
 
-          {/* Cart Item List */}
+          {/* Cart Item List - Expansive & Cleanly Visible */}
           <div
             style={{
-              flex: 1,
+              flex: '1 1 auto',
+              minHeight: '160px',
               overflowY: 'auto',
               borderTop: '1px solid #f1f5f9',
               borderBottom: '1px solid #f1f5f9',
-              padding: '10px 0',
+              padding: '8px 0',
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px'
+              gap: '6px'
             }}
           >
             {cart.length === 0 ? (
-              <div style={{ padding: '50px 16px', textAlign: 'center', color: '#94a3b8' }}>
-                <Barcode size={44} style={{ margin: '0 auto 10px auto', opacity: 0.35 }} />
+              <div style={{ padding: '40px 16px', textAlign: 'center', color: '#94a3b8' }}>
+                <Barcode size={40} style={{ margin: '0 auto 10px auto', opacity: 0.35 }} />
                 <div style={{ fontWeight: 700, color: '#64748b', fontSize: '0.95rem' }}>Cart is Empty</div>
                 <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>Scan barcode or click items to add</div>
                 {parkedOrders.length > 0 && (
@@ -1235,8 +1257,8 @@ export default function PosCheckout() {
                 <div
                   key={item.product.id}
                   style={{
-                    padding: '9px 11px',
-                    borderRadius: '10px',
+                    padding: '8px 10px',
+                    borderRadius: '9px',
                     backgroundColor: '#f8fafc',
                     border: '1px solid #f1f5f9',
                     display: 'flex',
@@ -1260,10 +1282,11 @@ export default function PosCheckout() {
                           objectFit: 'contain',
                           backgroundColor: '#ffffff',
                           border: '1px solid #e2e8f0',
+                          padding: '2px',
                           flexShrink: 0
                         }}
                       />
-                      <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '0.825rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {item.product.name}
                       </span>
                     </div>
@@ -1273,7 +1296,7 @@ export default function PosCheckout() {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {/* Unit price & discount badge */}
+                    {/* Unit price & line discount tag */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b' }}>
                         ${Number(item.product.sellingPrice).toFixed(2)} / {item.product.unit || 'pcs'}
@@ -1289,26 +1312,28 @@ export default function PosCheckout() {
                             fontWeight: 700
                           }}
                         >
-                          -${Number(item.discount).toFixed(2)}
+                          {item.discountPercent > 0 ? `${item.discountPercent}% OFF` : `-$${Number(item.discount).toFixed(2)}`}
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={() => openDiscountModal(item)}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: item.discount > 0 ? '#b91c1c' : '#94a3b8',
+                          background: item.discount > 0 ? '#fef2f2' : '#eff6ff',
+                          border: `1px solid ${item.discount > 0 ? '#fecaca' : '#bfdbfe'}`,
+                          color: item.discount > 0 ? '#b91c1c' : '#1d4ed8',
+                          borderRadius: '4px',
                           cursor: 'pointer',
-                          padding: '1px 3px',
+                          padding: '1px 6px',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '2px',
-                          fontSize: '0.675rem'
+                          gap: '3px',
+                          fontSize: '0.675rem',
+                          fontWeight: 700
                         }}
-                        title="Add line-item discount"
+                        title="Add promotional item discount"
                       >
-                        <Tag size={11} /> {item.discount > 0 ? 'Edit' : 'Disc'}
+                        <Tag size={10} /> {item.discount > 0 ? 'Edit' : '+ Disc'}
                       </button>
                     </div>
 
@@ -1366,155 +1391,17 @@ export default function PosCheckout() {
             )}
           </div>
 
-          {/* Whole-Cart Order Discount Selector */}
-          <div
-            style={{
-              padding: '7px 10px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              marginTop: '6px',
-              marginBottom: '4px'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Order Discount
-              </span>
-              {cartDiscount.type !== 'none' && (
-                <span style={{ fontSize: '0.725rem', color: '#dc2626', fontWeight: 700 }}>
-                  -{cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`} (-${cartDiscountAmount.toFixed(2)})
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: '3px' }}>
-              <button
-                type="button"
-                className={`btn btn-sm ${cartDiscount.type === 'none' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
-                onClick={() => applyCartDiscount('none', 0)}
-              >
-                0%
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${cartDiscount.type === 'percent' && cartDiscount.value === 5 ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
-                onClick={() => applyCartDiscount('percent', 5)}
-              >
-                5%
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${cartDiscount.type === 'percent' && cartDiscount.value === 10 ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
-                onClick={() => applyCartDiscount('percent', 10)}
-              >
-                10%
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${cartDiscount.type === 'percent' && cartDiscount.value === 15 ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
-                onClick={() => applyCartDiscount('percent', 15)}
-              >
-                15%
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${(cartDiscount.type === 'fixed' || (cartDiscount.type === 'percent' && ![0, 5, 10, 15].includes(cartDiscount.value))) ? 'btn-primary' : 'btn-outline'}`}
-                style={{ flex: 1.2, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
-                onClick={() => {
-                  setCustomCartDiscountType(cartDiscount.type === 'fixed' ? 'FIXED' : 'PERCENT');
-                  setCustomCartDiscountValue(cartDiscount.value > 0 ? String(cartDiscount.value) : '');
-                  setCartDiscountModalOpen(true);
-                }}
-              >
-                Custom
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Exchange Rate Selector */}
-          <div
-            style={{
-              padding: '6px 10px',
-              backgroundColor: '#eff6ff',
-              borderRadius: '8px',
-              border: '1px solid #bfdbfe',
-              marginBottom: '6px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#1e40af' }}>
-              $1 = {exchangeRate.toLocaleString()} ៛
-            </span>
-            <div style={{ display: 'flex', gap: '3px' }}>
-              {[4000, 4100, 4150].map((rate) => (
-                <button
-                  key={rate}
-                  type="button"
-                  className={`btn btn-sm ${exchangeRate === rate ? 'btn-primary' : 'btn-outline'}`}
-                  style={{
-                    padding: '1px 6px',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    height: '23px'
-                  }}
-                  onClick={() => setExchangeRate(rate)}
-                >
-                  {rate}
-                </button>
-              ))}
-              <button
-                type="button"
-                className={`btn btn-sm ${![4000, 4100, 4150].includes(exchangeRate) ? 'btn-primary' : 'btn-outline'}`}
-                style={{
-                  padding: '1px 6px',
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  height: '23px'
-                }}
-                onClick={() => {
-                  setCustomRateInput(exchangeRate.toString());
-                  setExchangeModalOpen(true);
-                }}
-              >
-                Custom
-              </button>
-            </div>
-          </div>
-
           {/* Totals Summary Banner */}
-          <div style={{ padding: '4px 0 6px 0', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: '3px', flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b' }}>
               <span>Subtotal:</span>
               <span className="currency-amount" style={{ fontWeight: 700 }}>${subtotal.toFixed(2)}</span>
             </div>
 
             {itemDiscountTotal > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#dc2626' }}>
-                <span>Item Discounts:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#dc2626' }}>
+                <span>Item Promotional Discounts:</span>
                 <span className="currency-amount" style={{ fontWeight: 700 }}>-${itemDiscountTotal.toFixed(2)}</span>
-              </div>
-            )}
-
-            {cartDiscountAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#dc2626' }}>
-                <span>
-                  Order Discount ({cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`}):
-                </span>
-                <span className="currency-amount" style={{ fontWeight: 700 }}>-${cartDiscountAmount.toFixed(2)}</span>
-              </div>
-            )}
-
-            {discountTotal > 0 && (itemDiscountTotal > 0 && cartDiscountAmount > 0) && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#b91c1c', fontWeight: 700 }}>
-                <span>Total Savings:</span>
-                <span className="currency-amount">-${discountTotal.toFixed(2)}</span>
               </div>
             )}
 
@@ -1525,16 +1412,16 @@ export default function PosCheckout() {
                 alignItems: 'baseline',
                 borderTop: '1px solid #e2e8f0',
                 paddingTop: '6px',
-                marginTop: '2px'
+                marginTop: '3px'
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#0f172a' }}>Grand Total:</div>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>Grand Total:</div>
                 <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 700 }} className="currency-amount">
                   {grandTotalKHR.toLocaleString()} ៛ KHR
                 </div>
               </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1e40af' }} className="currency-amount">
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1e40af' }} className="currency-amount">
                 ${grandTotal.toFixed(2)}
               </div>
             </div>
@@ -1728,7 +1615,7 @@ export default function PosCheckout() {
             <Keyboard size={13} color="#2563eb" /> Shortcuts:
           </span>
           <span><kbd style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '3px' }}>F1</kbd> Barcode</span>
-          <span><kbd style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '3px' }}>F2</kbd> Quick Barcodes</span>
+          <span><kbd style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '3px' }}>F2</kbd> Camera Scanner</span>
           <span><kbd style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '3px' }}>F4</kbd> Hold Cart</span>
           <span><kbd style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '3px' }}>F8</kbd> Cash</span>
           <span><kbd style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '3px' }}>F9</kbd> QR</span>
@@ -1876,156 +1763,216 @@ export default function PosCheckout() {
         </div>
       </Modal>
 
-      {/* Modal: Item Discount */}
+      {/* Modal: Promotional Item Discount */}
       <Modal
         isOpen={Boolean(discountModalItem)}
         onClose={() => setDiscountModalItem(null)}
-        title={`Apply Discount: ${discountModalItem?.product?.name || ''}`}
-        maxWidth="440px"
+        title="Promotional Item Discount"
+        maxWidth="460px"
       >
-        <form onSubmit={handleApplyDiscount} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label className="form-label">Discount Type:</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                className={`btn btn-sm ${discountType === 'FIXED' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setDiscountType('FIXED')}
+        {discountModalItem && (() => {
+          const unitPrice = Number(discountModalItem.product?.sellingPrice || 0);
+          const qty = discountModalItem.quantity;
+          const lineSubtotal = Math.round(qty * unitPrice * 100) / 100;
+          const valNum = parseFloat(discountValueInput) || 0;
+          let computedDiscount = 0;
+          if (discountType === 'PERCENT') {
+            computedDiscount = Math.round(((lineSubtotal * Math.min(100, Math.max(0, valNum))) / 100) * 100) / 100;
+          } else {
+            computedDiscount = Math.min(lineSubtotal, Math.max(0, valNum));
+          }
+          const finalLineTotal = Math.max(0, Math.round((lineSubtotal - computedDiscount) * 100) / 100);
+
+          return (
+            <form onSubmit={handleApplyDiscount} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Product Snapshot Card */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '10px 14px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px'
+                }}
               >
-                Fixed Dollar ($)
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${discountType === 'PERCENT' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setDiscountType('PERCENT')}
+                <img
+                  src={getProductImageUrl(discountModalItem.product)}
+                  alt={discountModalItem.product.name}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = getProductSvgPlaceholder(discountModalItem.product);
+                  }}
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    objectFit: 'contain',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '2px',
+                    flexShrink: 0
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {discountModalItem.product.name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', gap: '8px', marginTop: '2px' }}>
+                    <span>${unitPrice.toFixed(2)} × {qty} {discountModalItem.product.unit || 'pcs'}</span>
+                    <span>•</span>
+                    <span style={{ fontWeight: 700, color: '#1e40af' }}>Subtotal: ${lineSubtotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Discount Mode Selector */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '6px' }}>
+                  Select Discount Type:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${discountType === 'PERCENT' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => {
+                      setDiscountType('PERCENT');
+                      if (discountType === 'FIXED' && valNum > 0 && lineSubtotal > 0) {
+                        setDiscountValueInput(String(Math.round((valNum / lineSubtotal) * 100)));
+                      }
+                    }}
+                    style={{ fontWeight: 700 }}
+                  >
+                    Percentage (%)
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${discountType === 'FIXED' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => {
+                      setDiscountType('FIXED');
+                      if (discountType === 'PERCENT' && valNum > 0) {
+                        setDiscountValueInput(String(computedDiscount.toFixed(2)));
+                      }
+                    }}
+                    style={{ fontWeight: 700 }}
+                  >
+                    Fixed Dollar ($)
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.75rem', marginBottom: '6px', color: '#475569' }}>
+                  Quick Preset {discountType === 'PERCENT' ? 'Percentages' : 'Amounts'}:
+                </label>
+                {discountType === 'PERCENT' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                    {[5, 10, 15, 20, 50].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        className={`btn btn-sm ${valNum === pct ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '5px 0', fontSize: '0.78rem', fontWeight: 700 }}
+                        onClick={() => setDiscountValueInput(String(pct))}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                    {[0.25, 0.50, 1.00, 2.00].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        className={`btn btn-sm ${valNum === amt ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '5px 0', fontSize: '0.78rem', fontWeight: 700 }}
+                        onClick={() => setDiscountValueInput(String(amt))}
+                      >
+                        ${amt.toFixed(2)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Value Input */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem' }}>
+                  {discountType === 'PERCENT' ? 'Custom Discount Percentage (%):' : 'Custom Discount Amount ($ USD):'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    max={discountType === 'PERCENT' ? '100' : lineSubtotal}
+                    className="form-input mono"
+                    value={discountValueInput}
+                    onChange={(e) => setDiscountValueInput(e.target.value)}
+                    placeholder={discountType === 'PERCENT' ? 'e.g. 15' : 'e.g. 0.75'}
+                    style={{ fontSize: '1rem', fontWeight: 700, paddingLeft: '12px' }}
+                    autoFocus
+                  />
+                  <span style={{ position: 'absolute', right: '12px', top: '10px', color: '#64748b', fontWeight: 700, fontSize: '0.85rem' }}>
+                    {discountType === 'PERCENT' ? '%' : '$ USD'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Preview Summary */}
+              <div
+                style={{
+                  padding: '10px 14px',
+                  backgroundColor: computedDiscount > 0 ? '#f0fdf4' : '#f8fafc',
+                  border: `1px solid ${computedDiscount > 0 ? '#bbf7d0' : '#e2e8f0'}`,
+                  borderRadius: '10px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
               >
-                Percentage (%)
-              </button>
-            </div>
-          </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Original: ${lineSubtotal.toFixed(2)}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: computedDiscount > 0 ? '#15803d' : '#64748b' }}>
+                    Discount: -${computedDiscount.toFixed(2)} {discountType === 'PERCENT' && valNum > 0 ? `(${valNum}%)` : ''}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.725rem', color: '#64748b' }}>New Line Total</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e40af' }} className="currency-amount">
+                    ${finalLineTotal.toFixed(2)}
+                  </div>
+                </div>
+              </div>
 
-          <div>
-            <label className="form-label">
-              {discountType === 'FIXED' ? 'Discount Amount ($ USD):' : 'Discount Percentage (%):'}
-            </label>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              max={discountType === 'PERCENT' ? '100' : undefined}
-              className="form-input mono"
-              value={discountValueInput}
-              onChange={(e) => setDiscountValueInput(e.target.value)}
-              placeholder={discountType === 'FIXED' ? '0.50' : '10'}
-              autoFocus
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              style={{ color: '#ef4444', borderColor: '#fecaca' }}
-              onClick={() => {
-                if (discountModalItem) {
-                  updateDiscount(discountModalItem.product.id, 0);
-                  setDiscountModalItem(null);
-                }
-              }}
-            >
-              Clear Discount
-            </button>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setDiscountModalItem(null)} className="btn btn-outline btn-sm">
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-primary btn-sm">
-                Apply Discount
-              </button>
-            </div>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Modal: Custom Cart Discount */}
-      <Modal
-        isOpen={cartDiscountModalOpen}
-        onClose={() => setCartDiscountModalOpen(false)}
-        title="Custom Whole-Order Discount"
-        maxWidth="440px"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const val = parseFloat(customCartDiscountValue) || 0;
-            if (val > 0) {
-              applyCartDiscount(customCartDiscountType === 'PERCENT' ? 'percent' : 'fixed', val);
-            } else {
-              applyCartDiscount('none', 0);
-            }
-            setCartDiscountModalOpen(false);
-          }}
-          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
-        >
-          <div>
-            <label className="form-label">Discount Type:</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                className={`btn btn-sm ${customCartDiscountType === 'PERCENT' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setCustomCartDiscountType('PERCENT')}
-              >
-                Percentage (%)
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${customCartDiscountType === 'FIXED' ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setCustomCartDiscountType('FIXED')}
-              >
-                Fixed Dollar ($)
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="form-label">
-              {customCartDiscountType === 'PERCENT' ? 'Order Discount Percentage (%):' : 'Order Discount Amount ($ USD):'}
-            </label>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              max={customCartDiscountType === 'PERCENT' ? '100' : undefined}
-              className="form-input mono"
-              value={customCartDiscountValue}
-              onChange={(e) => setCustomCartDiscountValue(e.target.value)}
-              placeholder={customCartDiscountType === 'PERCENT' ? 'e.g. 12' : 'e.g. 3.00'}
-              autoFocus
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              style={{ color: '#ef4444', borderColor: '#fecaca' }}
-              onClick={() => {
-                applyCartDiscount('none', 0);
-                setCartDiscountModalOpen(false);
-              }}
-            >
-              Clear Discount
-            </button>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setCartDiscountModalOpen(false)} className="btn btn-outline btn-sm">
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-primary btn-sm">
-                Apply to Cart
-              </button>
-            </div>
-          </div>
-        </form>
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', paddingTop: '4px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ color: '#ef4444', borderColor: '#fecaca', fontWeight: 700 }}
+                  onClick={() => {
+                    updateDiscount(discountModalItem.product.id, 0, 0);
+                    setDiscountModalItem(null);
+                  }}
+                >
+                  Clear Discount
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => setDiscountModalItem(null)} className="btn btn-outline btn-sm">
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 700 }}>
+                    Apply Discount
+                  </button>
+                </div>
+              </div>
+            </form>
+          );
+        })()}
       </Modal>
 
       {/* Modal: Custom Exchange Rate */}

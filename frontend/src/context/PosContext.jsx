@@ -92,11 +92,18 @@ export function PosProvider({ children }) {
       if (existingIndex > -1) {
         const updated = [...prevCart];
         const newQty = updated[existingIndex].quantity + quantity;
-        const discount = updated[existingIndex].discount || 0;
+        const rawTotal = newQty * Number(product.sellingPrice);
+        let discount = updated[existingIndex].discount || 0;
+        if (updated[existingIndex].discountPercent > 0) {
+          discount = Math.round(((rawTotal * updated[existingIndex].discountPercent) / 100) * 100) / 100;
+        } else {
+          discount = Math.min(rawTotal, discount);
+        }
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: newQty,
-          lineTotal: Math.max(0, newQty * Number(product.sellingPrice) - discount)
+          discount,
+          lineTotal: Math.max(0, Math.round((rawTotal - discount) * 100) / 100)
         };
         return updated;
       } else {
@@ -114,7 +121,7 @@ export function PosProvider({ children }) {
     });
   };
 
-  // Update quantity via step or direct input
+  // Update quantity via step or direct input with proportional discount adjustment
   const updateQuantity = (productId, newQuantity) => {
     const qty = Math.max(0, parseInt(newQuantity, 10) || 0);
     if (qty <= 0) {
@@ -124,9 +131,15 @@ export function PosProvider({ children }) {
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.product.id === productId) {
-          const discount = item.discount || 0;
-          const lineTotal = Math.max(0, qty * Number(item.product.sellingPrice) - discount);
-          return { ...item, quantity: qty, lineTotal };
+          const rawTotal = qty * Number(item.product.sellingPrice);
+          let disc = item.discount || 0;
+          if (item.discountPercent > 0) {
+            disc = Math.round(((rawTotal * item.discountPercent) / 100) * 100) / 100;
+          } else {
+            disc = Math.min(rawTotal, disc);
+          }
+          const lineTotal = Math.max(0, Math.round((rawTotal - disc) * 100) / 100);
+          return { ...item, quantity: qty, discount: disc, lineTotal };
         }
         return item;
       })
@@ -134,16 +147,24 @@ export function PosProvider({ children }) {
   };
 
   // Update item discount (either fixed USD or percentage)
-  const updateDiscount = (productId, discountAmount) => {
-    const disc = Math.max(0, Number(discountAmount) || 0);
+  const updateDiscount = (productId, discountAmount, discountPercent = null) => {
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.product.id === productId) {
           const rawTotal = item.quantity * Number(item.product.sellingPrice);
+          let disc = 0;
+          let pct = discountPercent;
+          if (pct !== null && pct !== undefined && pct > 0) {
+            disc = (rawTotal * Number(pct)) / 100;
+          } else {
+            disc = Math.max(0, Number(discountAmount) || 0);
+            pct = rawTotal > 0 ? Math.round((disc / rawTotal) * 100) : 0;
+          }
           const validDiscount = Math.min(rawTotal, disc);
           return {
             ...item,
             discount: Math.round(validDiscount * 100) / 100,
+            discountPercent: validDiscount > 0 ? pct : 0,
             lineTotal: Math.max(0, Math.round((rawTotal - validDiscount) * 100) / 100)
           };
         }

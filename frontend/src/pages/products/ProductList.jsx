@@ -127,6 +127,12 @@ export default function ProductList() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
+      // If the image is a PNG or WebP and already reasonably sized (<600KB), keep original directly to preserve 100% alpha transparency
+      if ((file.type === 'image/png' || file.type === 'image/webp') && file.size <= 600 * 1024) {
+        setFormData((prev) => ({ ...prev, imageUrl: event.target.result }));
+        return;
+      }
+
       const img = new window.Image();
       img.onload = () => {
         // Resize proportionally if larger than 800px max dimension
@@ -148,9 +154,12 @@ export default function ProductList() {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
+        // Clear canvas with transparent pixels (prevents black background on transparent PNG/WebP)
+        ctx.clearRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
+        // Always preserve transparency using PNG (lossless alpha channel)
+        const dataUrl = canvas.toDataURL('image/png');
         setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
       };
       img.src = event.target.result;
@@ -391,9 +400,10 @@ export default function ProductList() {
                             width: '38px',
                             height: '38px',
                             borderRadius: '8px',
-                            objectFit: 'cover',
+                            objectFit: 'contain',
                             border: '1px solid #e2e8f0',
-                            backgroundColor: '#f8fafc',
+                            backgroundColor: '#ffffff',
+                            padding: '2px',
                             flexShrink: 0
                           }}
                         />
@@ -777,7 +787,8 @@ export default function ProductList() {
                     width: '80px',
                     height: '80px',
                     borderRadius: '10px',
-                    objectFit: 'cover',
+                    objectFit: 'contain',
+                    padding: '4px',
                     border: '1.5px solid #2563eb',
                     backgroundColor: '#ffffff',
                     flexShrink: 0
