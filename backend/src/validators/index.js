@@ -64,15 +64,17 @@ const productSchema = z.object({
 // Inventory adjustments & write-offs
 const stockAdjustmentSchema = z.object({
   productId: z.string().uuid(),
-  batchId: z.string().uuid().optional().nullable(),
+  batchId: z.string().uuid().optional().or(z.literal('')).nullable(),
   type: z.enum(['ADJUSTMENT_ADD', 'ADJUSTMENT_SUBTRACT']),
   quantity: z.number().positive('Quantity must be greater than 0'),
-  reason: z.string().min(3, 'Reason is required for inventory audit')
+  reason: z.string().min(3, 'Reason is required for inventory audit'),
+  expiryDate: z.string().optional().or(z.literal('')).nullable()
 });
 
 const writeOffSchema = z.object({
   batchId: z.string().uuid(),
   type: z.enum(['WRITE_OFF_EXPIRED', 'WRITE_OFF_DAMAGED']),
+  quantity: z.number().positive().optional().nullable(),
   reason: z.string().min(3, 'Reason is required')
 });
 

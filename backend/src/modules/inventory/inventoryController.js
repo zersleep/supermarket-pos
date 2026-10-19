@@ -202,16 +202,31 @@ async function adjustStock(req, res, next) {
             data: { currentQuantity: { increment: adjustQty } }
           });
         } else {
-          // Create a new adjustment batch
-          targetBatch = await tx.inventoryBatch.create({
-            data: {
-              batchNumber: `ADJ-ADD-${Date.now().toString().slice(-6)}`,
-              productId: product.id,
-              initialQuantity: adjustQty,
-              currentQuantity: adjustQty,
-              costPrice: product.costPrice
-            }
-          });
+          // If no batch was specified, check if the product has existing active batches
+          // Default to incrementing the latest active batch to avoid creating fragmented ghost batches
+          const latestActiveBatch = product.batches && product.batches.length > 0
+            ? product.batches[product.batches.length - 1]
+            : null;
+
+          if (latestActiveBatch) {
+            targetBatch = latestActiveBatch;
+            await tx.inventoryBatch.update({
+              where: { id: targetBatch.id },
+              data: { currentQuantity: { increment: adjustQty } }
+            });
+          } else {
+            // Create a new adjustment batch
+            targetBatch = await tx.inventoryBatch.create({
+              data: {
+                batchNumber: `ADJ-ADD-${Date.now().toString().slice(-6)}`,
+                productId: product.id,
+                initialQuantity: adjustQty,
+                currentQuantity: adjustQty,
+                costPrice: product.costPrice,
+                expiryDate: data.expiryDate ? new Date(data.expiryDate) : null
+              }
+            });
+          }
         }
 
         await tx.stockMovement.create({
@@ -319,11 +334,17 @@ async function writeOffBatch(req, res, next) {
       return sendError(res, 'This batch has already been written off.', 400);
     }
 
-    const writeOffQuantity = Number(batch.currentQuantity);
-    if (writeOffQuantity <= 0) {
+    const maxAvailable = Number(batch.currentQuantity);
+    if (maxAvailable <= 0) {
       return sendError(res, 'Batch has no remaining stock to write off.', 400);
     }
 
+    const writeOffQuantity = data.quantity ? Number(data.quantity) : maxAvailable;
+    if (writeOffQuantity <= 0 || writeOffQuantity > maxAvailable) {
+      return sendError(res, `Invalid write-off quantity. Available in this batch is ${maxAvailable}.`, 400);
+    }
+
+    const isFullWriteOff = writeOffQuantity >= maxAvailable;
     const previousTotal = batch.product.batches.reduce((sum, b) => sum + Number(b.currentQuantity), 0);
     const newTotal = previousTotal - writeOffQuantity;
 
@@ -331,8 +352,8 @@ async function writeOffBatch(req, res, next) {
       await tx.inventoryBatch.update({
         where: { id: batch.id },
         data: {
-          currentQuantity: 0,
-          isWriteOff: true
+          currentQuantity: { decrement: writeOffQuantity },
+          ...(isFullWriteOff && { isWriteOff: true })
         }
       });
 
