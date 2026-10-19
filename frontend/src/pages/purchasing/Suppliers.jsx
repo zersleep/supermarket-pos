@@ -13,7 +13,9 @@ import {
   User,
   FileText,
   CheckCircle2,
-  Clock
+  Clock,
+  Trash2,
+  Ban
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -127,6 +129,39 @@ export default function Suppliers() {
       alert(err.message || 'Action failed.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (supplier) => {
+    const nextStatus = !supplier.isActive;
+    const actionWord = nextStatus ? 'activate' : 'block / deactivate';
+    if (!window.confirm(`Are you sure you want to ${actionWord} supplier "${supplier.name}"?`)) {
+      return;
+    }
+    try {
+      await api.put(`/suppliers/${supplier.id}`, { isActive: nextStatus });
+      setSuccess(`Supplier "${supplier.name}" is now ${nextStatus ? 'Active' : 'Blocked / Inactive'}.`);
+      fetchSuppliers();
+    } catch (err) {
+      alert(err.message || 'Failed to update supplier status.');
+    }
+  };
+
+  const handleDeleteSupplier = async (supplier) => {
+    const poCount = supplier._count?.purchaseOrders || 0;
+    const promptMsg =
+      poCount > 0
+        ? `Supplier "${supplier.name}" has ${poCount} historical purchase order(s). To preserve accounting records, they will be marked Inactive and blocked from future orders. Continue?`
+        : `Are you sure you want to permanently delete supplier "${supplier.name}"?`;
+
+    if (!window.confirm(promptMsg)) return;
+
+    try {
+      const res = await api.delete(`/suppliers/${supplier.id}`);
+      setSuccess(res.message || `Supplier "${supplier.name}" processed.`);
+      fetchSuppliers();
+    } catch (err) {
+      alert(err.message || 'Failed to delete supplier.');
     }
   };
 
@@ -416,13 +451,35 @@ export default function Suppliers() {
 
                       {canManageInventory && (
                         <td style={{ textAlign: 'right' }}>
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => openEditModal(s)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <Edit size={13} /> Edit
-                          </button>
+                          <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => openEditModal(s)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              title="Edit supplier details"
+                            >
+                              <Edit size={13} /> Edit
+                            </button>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              style={{
+                                color: s.isActive ? '#b45309' : '#047857',
+                                borderColor: s.isActive ? '#fde68a' : '#a7f3d0'
+                              }}
+                              onClick={() => handleToggleStatus(s)}
+                              title={s.isActive ? 'Block/Deactivate this supplier from future orders' : 'Reactivate supplier'}
+                            >
+                              {s.isActive ? 'Block' : 'Activate'}
+                            </button>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              style={{ color: '#ef4444', borderColor: '#fca5a5', padding: '6px' }}
+                              onClick={() => handleDeleteSupplier(s)}
+                              title="Delete or Deactivate Supplier"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>

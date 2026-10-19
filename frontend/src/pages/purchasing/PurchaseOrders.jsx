@@ -20,7 +20,8 @@ import {
   Phone,
   Mail,
   Trash2,
-  Tag
+  Tag,
+  Filter
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +44,7 @@ export default function PurchaseOrders() {
   // Create PO Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [supplierId, setSupplierId] = useState('');
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const [expectedDate, setExpectedDate] = useState('');
   const [notes, setNotes] = useState('');
   const [poItems, setPoItems] = useState([
@@ -108,11 +110,18 @@ export default function PurchaseOrders() {
   }, []);
 
   const openCreateModal = () => {
-    const defaultSupplier = suppliers[0]?.id || '';
-    const defaultProduct = products[0];
+    const activeSuppliers = suppliers.filter((s) => s.isActive);
+    const defaultSupplier = activeSuppliers[0]?.id || suppliers[0]?.id || '';
     setSupplierId(defaultSupplier);
+    setShowAllProducts(false);
     setExpectedDate('');
     setNotes('');
+
+    const linkedProds = products.filter(
+      (p) => p.preferredSupplierId === defaultSupplier || p.preferredSupplier?.id === defaultSupplier
+    );
+    const defaultProduct = linkedProds[0] || products[0];
+
     setPoItems([
       {
         productId: defaultProduct?.id || '',
@@ -124,8 +133,12 @@ export default function PurchaseOrders() {
   };
 
   const handleAddItemRow = () => {
-    if (products.length > 0) {
-      const defaultProduct = products[0];
+    const linked = products.filter(
+      (p) => p.preferredSupplierId === supplierId || p.preferredSupplier?.id === supplierId
+    );
+    const pool = !showAllProducts && linked.length > 0 ? linked : products;
+    if (pool.length > 0) {
+      const defaultProduct = pool[0];
       setPoItems([
         ...poItems,
         {
@@ -392,6 +405,13 @@ export default function PurchaseOrders() {
 
   // Selected supplier in Create PO modal
   const selectedSupplierObj = suppliers.find((s) => s.id === supplierId);
+
+  // Products linked to selected supplier
+  const supplierProducts = products.filter(
+    (p) => p.preferredSupplierId === supplierId || p.preferredSupplier?.id === supplierId
+  );
+  const selectableProducts =
+    !showAllProducts && supplierProducts.length > 0 ? supplierProducts : products;
 
   // Create PO total calculation
   const createPoTotalCost = poItems.reduce(
@@ -818,11 +838,26 @@ export default function PurchaseOrders() {
                 <select
                   className="form-select"
                   value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
+                  onChange={(e) => {
+                    const newSupId = e.target.value;
+                    setSupplierId(newSupId);
+                    const linked = products.filter(
+                      (p) => p.preferredSupplierId === newSupId || p.preferredSupplier?.id === newSupId
+                    );
+                    if (linked.length > 0) {
+                      setPoItems([
+                        {
+                          productId: linked[0].id,
+                          quantityOrdered: 10,
+                          unitCost: Number(linked[0].costPrice) || 1.0
+                        }
+                      ]);
+                    }
+                  }}
                   required
                   style={{ fontSize: '0.95rem', fontWeight: 600 }}
                 >
-                  {suppliers.map((s) => (
+                  {suppliers.filter((s) => s.isActive).map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} {s.contactPerson ? `— Contact: ${s.contactPerson}` : ''}
                     </option>
@@ -942,6 +977,51 @@ export default function PurchaseOrders() {
               </button>
             </div>
 
+            {/* Supplier Product Filter Banner */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                backgroundColor: supplierProducts.length > 0 ? '#eff6ff' : '#fef3c7',
+                border: `1px solid ${supplierProducts.length > 0 ? '#bfdbfe' : '#fde68a'}`,
+                borderRadius: '8px',
+                marginBottom: '14px',
+                fontSize: '0.825rem',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: supplierProducts.length > 0 ? '#1e40af' : '#92400e' }}>
+                <Filter size={15} />
+                {supplierProducts.length > 0 ? (
+                  <span>
+                    Showing <strong>{showAllProducts ? products.length : supplierProducts.length}</strong> product{supplierProducts.length === 1 ? '' : 's'}
+                    {!showAllProducts && (
+                      <> supplied by <strong>{selectedSupplierObj?.name || 'this vendor'}</strong></>
+                    )}
+                  </span>
+                ) : (
+                  <span>
+                    No specific products are linked to <strong>{selectedSupplierObj?.name}</strong> yet. Showing all catalog products. (You can set primary suppliers in the Product Catalog).
+                  </span>
+                )}
+              </div>
+
+              {supplierProducts.length > 0 && (
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: '#334155', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={showAllProducts}
+                    onChange={(e) => setShowAllProducts(e.target.checked)}
+                    style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                  />
+                  Show all catalog products ({products.length})
+                </label>
+              )}
+            </div>
+
             <div className="table-container" style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
               <table>
                 <thead>
@@ -957,6 +1037,11 @@ export default function PurchaseOrders() {
                   {poItems.map((item, idx) => {
                     const matchedProd = products.find((p) => p.id === item.productId);
                     const lineSubtotal = (Number(item.quantityOrdered) || 0) * (Number(item.unitCost) || 0);
+
+                    // Ensure currently selected product is available in options even if filter toggles
+                    const optionsToRender = selectableProducts.some((p) => p.id === item.productId)
+                      ? selectableProducts
+                      : (matchedProd ? [matchedProd, ...selectableProducts] : selectableProducts);
 
                     return (
                       <tr key={idx}>
@@ -983,11 +1068,14 @@ export default function PurchaseOrders() {
                                 value={item.productId}
                                 onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
                               >
-                                {products.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name} ({p.sku}) — In Stock: {p.currentStock || 0} {p.unit}s
-                                  </option>
-                                ))}
+                                {optionsToRender.map((p) => {
+                                  const isLinked = p.preferredSupplierId === supplierId || p.preferredSupplier?.id === supplierId;
+                                  return (
+                                    <option key={p.id} value={p.id}>
+                                      {isLinked ? '⭐ ' : ''}{p.name} ({p.sku}) — In Stock: {p.currentStock || 0} {p.unit}s{isLinked ? ' [Preferred Vendor]' : ''}
+                                    </option>
+                                  );
+                                })}
                               </select>
                               {matchedProd && (
                                 <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>

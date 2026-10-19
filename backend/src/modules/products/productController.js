@@ -13,6 +13,7 @@ async function getProducts(req, res, next) {
       limit = 20,
       search = '',
       categoryId = '',
+      supplierId = '',
       status = 'active',
       lowStock = 'false'
     } = req.query;
@@ -25,6 +26,10 @@ async function getProducts(req, res, next) {
 
     if (categoryId) {
       where.categoryId = categoryId;
+    }
+
+    if (supplierId) {
+      where.preferredSupplierId = supplierId;
     }
 
     if (search) {
@@ -45,6 +50,9 @@ async function getProducts(req, res, next) {
         orderBy: { name: 'asc' },
         include: {
           category: {
+            select: { id: true, name: true }
+          },
+          preferredSupplier: {
             select: { id: true, name: true }
           },
           barcodes: {
@@ -169,6 +177,7 @@ async function getProductById(req, res, next) {
       where: { id },
       include: {
         category: true,
+        preferredSupplier: true,
         barcodes: true,
         batches: {
           orderBy: { receivedAt: 'desc' }
@@ -239,6 +248,7 @@ async function createProduct(req, res, next) {
           description: data.description ? data.description.trim() : null,
           imageUrl: data.imageUrl ? data.imageUrl.trim() : null,
           categoryId: data.categoryId || null,
+          preferredSupplierId: data.preferredSupplierId || null,
           costPrice: data.costPrice,
           sellingPrice: data.sellingPrice,
           wholesalePrice: data.wholesalePrice || null,
@@ -366,6 +376,7 @@ async function updateProduct(req, res, next) {
         ...(data.description !== undefined && { description: data.description ? data.description.trim() : null }),
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl ? data.imageUrl.trim() : null }),
         ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
+        ...(data.preferredSupplierId !== undefined && { preferredSupplierId: data.preferredSupplierId || null }),
         ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
         ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
         ...(data.wholesalePrice !== undefined && { wholesalePrice: data.wholesalePrice || null }),

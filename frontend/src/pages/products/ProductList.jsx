@@ -14,7 +14,9 @@ import {
   DollarSign,
   Tag,
   Boxes,
-  AlertCircle
+  AlertCircle,
+  Truck,
+  Building2
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +27,7 @@ import { getProductImageUrl } from '../../utils/productImages';
 export default function ProductList() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -46,6 +49,7 @@ export default function ProductList() {
     barcode: '',
     description: '',
     categoryId: '',
+    preferredSupplierId: '',
     costPrice: '',
     sellingPrice: '',
     unit: 'piece',
@@ -64,12 +68,14 @@ export default function ProductList() {
     try {
       setLoading(true);
       setError('');
-      const [prodRes, catRes] = await Promise.all([
-        api.get(`/products?search=${encodeURIComponent(query)}&categoryId=${selectedCategory}&status=${statusFilter}&limit=50`),
-        api.get('/categories')
+      const [prodRes, catRes, supRes] = await Promise.all([
+        api.get(`/products?search=${encodeURIComponent(query)}&categoryId=${selectedCategory}&status=${statusFilter}&limit=100`),
+        api.get('/categories'),
+        api.get('/suppliers?status=all&limit=100')
       ]);
       setProducts(prodRes.data || []);
       setCategories(catRes.data || []);
+      setSuppliers(supRes.data || []);
     } catch (err) {
       setError(err.message || 'Failed to load products.');
     } finally {
@@ -161,6 +167,7 @@ export default function ProductList() {
       barcode: '',
       description: '',
       categoryId: categories[0]?.id || '',
+      preferredSupplierId: '',
       costPrice: '',
       sellingPrice: '',
       unit: 'piece',
@@ -184,6 +191,7 @@ export default function ProductList() {
       description: product.description || '',
       imageUrl: product.imageUrl || '',
       categoryId: product.categoryId || '',
+      preferredSupplierId: product.preferredSupplierId || product.preferredSupplier?.id || '',
       costPrice: product.costPrice,
       sellingPrice: product.sellingPrice,
       unit: product.unit,
@@ -210,6 +218,7 @@ export default function ProductList() {
         description: formData.description || undefined,
         imageUrl: formData.imageUrl || undefined,
         categoryId: formData.categoryId || undefined,
+        preferredSupplierId: formData.preferredSupplierId || undefined,
         costPrice: Number(formData.costPrice),
         sellingPrice: Number(formData.sellingPrice),
         unit: formData.unit,
@@ -391,7 +400,14 @@ export default function ProductList() {
                         <span>{p.name}</span>
                       </div>
                     </td>
-                    <td>{p.category?.name || 'Uncategorized'}</td>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{p.category?.name || 'Uncategorized'}</div>
+                      {p.preferredSupplier && (
+                        <div style={{ fontSize: '0.725rem', color: '#2563eb', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Truck size={11} /> {p.preferredSupplier.name}
+                        </div>
+                      )}
+                    </td>
                     <td className="mono">${Number(p.costPrice).toFixed(2)}</td>
                     <td className="mono" style={{ fontWeight: 700, color: '#2563eb' }}>
                       ${Number(p.sellingPrice).toFixed(2)}
@@ -489,22 +505,22 @@ export default function ProductList() {
               <Barcode size={16} /> 1. Product Identification & Category
             </div>
 
-            <div className="grid-2">
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600 }}>Product Name *</label>
-                <input
-                  type="text"
-                  required
-                  className="form-input"
-                  placeholder="e.g. Coca-Cola Can 330ml"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
-                  Full brand and product name displayed on POS & customer receipt.
-                </span>
-              </div>
+            <div className="form-group">
+              <label className="form-label" style={{ fontWeight: 600 }}>Product Name *</label>
+              <input
+                type="text"
+                required
+                className="form-input"
+                placeholder="e.g. Coca-Cola Can 330ml"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+              <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                Full brand and product name displayed on POS & customer receipt.
+              </span>
+            </div>
 
+            <div className="grid-2" style={{ marginTop: '4px' }}>
               <div className="form-group">
                 <label className="form-label" style={{ fontWeight: 600 }}>Category</label>
                 <select
@@ -520,7 +536,26 @@ export default function ProductList() {
                   ))}
                 </select>
                 <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
-                  Used for POS category filtering and inventory breakdown reports.
+                  Used for POS category filtering and breakdown reports.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Primary / Wholesale Supplier</label>
+                <select
+                  className="form-select"
+                  value={formData.preferredSupplierId}
+                  onChange={(e) => setFormData({ ...formData, preferredSupplierId: e.target.value })}
+                >
+                  <option value="">None / Open Market</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {!s.isActive ? '(Blocked / Inactive)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Links product to this vendor for auto-filtering in Purchase Orders.
                 </span>
               </div>
             </div>

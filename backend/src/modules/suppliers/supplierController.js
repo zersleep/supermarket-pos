@@ -134,9 +134,77 @@ async function updateSupplier(req, res, next) {
   }
 }
 
+async function deleteSupplier(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const supplier = await prisma.supplier.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { purchaseOrders: true, products: true }
+        }
+      }
+    });
+
+    if (!supplier) {
+      return sendError(res, 'Supplier not found.', 404);
+    }
+
+    // If historical purchase orders exist, prevent hard deletion to preserve financial/audit integrity, but deactivate
+    if (supplier._count.purchaseOrders > 0) {
+      const updated = await prisma.supplier.update({
+        where: { id },
+        data: { isActive: false }
+      });
+
+      await recordAuditLog({
+        userId: req.user.id,
+        action: 'SUPPLIER_DEACTIVATE',
+        entityType: 'Supplier',
+        entityId: id,
+        details: { name: supplier.name, reason: 'Deactivated due to historical purchase orders' },
+        req
+      });
+
+      return sendSuccess(
+        res,
+        updated,
+        `Supplier "${supplier.name}" has ${supplier._count.purchaseOrders} historical purchase order(s). To preserve audit trails, they have been marked Inactive and blocked from future orders.`
+      );
+    }
+
+    // If 0 purchase orders, unlink any linked products and permanently delete
+    if (supplier._count.products > 0) {
+      await prisma.product.updateMany({
+        where: { preferredSupplierId: id },
+        data: { preferredSupplierId: null }
+      });
+    }
+
+    await prisma.supplier.delete({
+      where: { id }
+    });
+
+    await recordAuditLog({
+      userId: req.user.id,
+      action: 'SUPPLIER_DELETE',
+      entityType: 'Supplier',
+      entityId: id,
+      details: { name: supplier.name },
+      req
+    });
+
+    return sendSuccess(res, null, `Supplier "${supplier.name}" permanently deleted.`);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getSuppliers,
   getSupplierById,
   createSupplier,
-  updateSupplier
+  updateSupplier,
+  deleteSupplier
 };

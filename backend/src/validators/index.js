@@ -48,6 +48,7 @@ const productSchema = z.object({
   description: z.string().max(500).optional().or(z.literal('')),
   imageUrl: z.string().optional().or(z.literal('')).nullable(),
   categoryId: z.string().uuid().optional().or(z.literal('')).nullable(),
+  preferredSupplierId: z.string().uuid().optional().or(z.literal('')).nullable(),
   costPrice: z.number().min(0, 'Cost price must be non-negative'),
   sellingPrice: z.number().min(0.01, 'Selling price must be greater than 0'),
   wholesalePrice: z.number().min(0).optional().nullable(),
