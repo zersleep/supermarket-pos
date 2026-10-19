@@ -56,13 +56,15 @@ async function checkout(req, res, next) {
     // 5. Execute Checkout inside an atomic Database Transaction
     const checkoutResult = await prisma.$transaction(async (tx) => {
       let subtotal = 0;
-      let totalDiscount = 0;
+      let itemsDiscountTotal = 0;
+      const orderDiscount = roundToTwo(Number(data.orderDiscount || 0));
       const saleItemsToCreate = [];
       const stockDeductions = [];
 
       const now = new Date();
 
-      // Validate every item and allocate batches via FEFO (First Expired First Out)
+      // Step A: Validate every item and stock availability
+      const validatedItems = [];
       for (const item of data.items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
@@ -102,14 +104,35 @@ async function checkout(req, res, next) {
           );
         }
 
-        // Calculate authoritative backend prices
         const unitPrice = Number(product.sellingPrice);
         const itemDiscount = Number(item.discount || 0);
         const itemSubtotal = roundToTwo(unitPrice * requestedQty);
-        const lineTotal = Math.max(0, roundToTwo(itemSubtotal - itemDiscount));
 
         subtotal = roundToTwo(subtotal + itemSubtotal);
-        totalDiscount = roundToTwo(totalDiscount + itemDiscount);
+        itemsDiscountTotal = roundToTwo(itemsDiscountTotal + itemDiscount);
+
+        validatedItems.push({
+          product,
+          requestedQty,
+          unitPrice,
+          itemDiscount,
+          itemSubtotal
+        });
+      }
+
+      // Authoritative combined discount: item promotions + special order discount
+      const totalDiscount = Math.min(subtotal, roundToTwo(itemsDiscountTotal + orderDiscount));
+
+      // Step B: Allocate batches via FEFO and record items
+      for (const vItem of validatedItems) {
+        const { product, requestedQty, unitPrice, itemDiscount, itemSubtotal } = vItem;
+
+        // Proportional share of order discount allocated to this line item
+        const orderShare = (orderDiscount > 0 && subtotal > 0)
+          ? roundToTwo(orderDiscount * (itemSubtotal / subtotal))
+          : 0;
+        const totalLineDiscount = Math.min(itemSubtotal, roundToTwo(itemDiscount + orderShare));
+        const lineTotal = Math.max(0, roundToTwo(itemSubtotal - totalLineDiscount));
 
         // FEFO batch allocation: allocate quantity across available batches
         let remainingQtyToAllocate = requestedQty;
@@ -128,7 +151,7 @@ async function checkout(req, res, next) {
             unitPriceSnapshot: unitPrice,
             costPriceSnapshot: Number(batch.costPrice || product.costPrice),
             quantity: allocatedQty,
-            discountAmount: roundToTwo(itemDiscount * (allocatedQty / requestedQty)),
+            discountAmount: roundToTwo(totalLineDiscount * (allocatedQty / requestedQty)),
             lineTotal: roundToTwo(lineTotal * (allocatedQty / requestedQty))
           });
 

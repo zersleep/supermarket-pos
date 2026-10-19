@@ -94,6 +94,11 @@ export default function PosCheckout() {
   const [discountType, setDiscountType] = useState('FIXED'); // 'FIXED' ($) or 'PERCENT' (%)
   const [discountValueInput, setDiscountValueInput] = useState('');
 
+  // Today's special sale / whole-order discount modal state
+  const [orderDiscountModalOpen, setOrderDiscountModalOpen] = useState(false);
+  const [orderDiscountType, setOrderDiscountType] = useState('PERCENT'); // 'PERCENT' or 'FIXED'
+  const [orderDiscountValueInput, setOrderDiscountValueInput] = useState('');
+
   // Payment State
   const [paymentMethod, setPaymentMethod] = useState('CASH'); // 'CASH' or 'QR_PAYMENT'
   const [cashReceived, setCashReceived] = useState('');
@@ -515,6 +520,7 @@ export default function PosCheckout() {
           quantity: i.quantity,
           discount: Number(i.discount) || 0
         })),
+        orderDiscount: cartDiscountAmount || 0,
         paymentMethod,
         currency,
         cashReceived: paymentMethod === 'CASH' ? numericCash : undefined,
@@ -855,7 +861,7 @@ export default function PosCheckout() {
             .pos-product-grid {
               display: grid;
               grid-template-columns: repeat(4, minmax(0, 1fr));
-              gap: 16px;
+              gap: 12px;
               align-content: start;
             }
             @media (max-width: 1300px) {
@@ -873,8 +879,8 @@ export default function PosCheckout() {
               font-weight: 700;
               font-size: 0.825rem;
               color: #0f172a;
-              line-height: 1.25;
-              height: 2.5em;
+              line-height: 1.3;
+              height: 2.6em;
               overflow: hidden;
               text-overflow: ellipsis;
               display: -webkit-box;
@@ -1000,51 +1006,31 @@ export default function PosCheckout() {
                       {p.name || p.sku || 'Unnamed Product'}
                     </div>
 
-                    {/* Product ID & Barcode - Single-Line to Prevent Uneven Heights */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      <span
+                    {/* Barcode & Stock Row - Category removed for spaciousness & clear barcode readability */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', margin: '4px 0 6px 0' }}>
+                      <div
                         style={{
-                          fontSize: '0.675rem',
-                          fontWeight: 700,
-                          backgroundColor: '#eff6ff',
-                          color: '#1d4ed8',
-                          padding: '1px 5px',
-                          borderRadius: '4px',
-                          border: '1px solid #bfdbfe',
-                          flexShrink: 0
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: '#334155',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          flex: 1
                         }}
-                        className="currency-amount"
+                        title={`Barcode / SKU: ${p.barcode || p.sku}`}
                       >
-                        ID: {p.sku}
-                      </span>
-                      {p.barcode && (
-                        <span
-                          style={{
-                            fontSize: '0.675rem',
-                            color: '#64748b',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                          className="currency-amount"
-                          title={p.barcode}
-                        >
-                          <Barcode size={10} style={{ flexShrink: 0 }} /> {p.barcode}
+                        <Barcode size={14} color="#2563eb" style={{ flexShrink: 0 }} />
+                        <span className="mono" style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {p.barcode || p.sku}
                         </span>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Category & Stock Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', marginBottom: '4px' }}>
-                      <span style={{ color: '#475569', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
-                        {p.category?.name || 'General'}
-                      </span>
                       <span
                         style={{
                           fontWeight: 700,
+                          fontSize: '0.675rem',
                           color: isOutOfStock ? '#dc2626' : p.isLowStock ? '#d97706' : '#16a34a',
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -1061,7 +1047,7 @@ export default function PosCheckout() {
                             display: 'inline-block'
                           }}
                         />
-                        {isOutOfStock ? 'Out of stock' : `${p.currentStock} in stock`}
+                        {isOutOfStock ? 'Out' : `${p.currentStock}`}
                       </span>
                     </div>
 
@@ -1398,10 +1384,64 @@ export default function PosCheckout() {
               <span className="currency-amount" style={{ fontWeight: 700 }}>${subtotal.toFixed(2)}</span>
             </div>
 
+            {/* Special Order / Sale Discount Row */}
+            {cartDiscount.value > 0 ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#dc2626' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>Order Sale ({cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`}):</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrderDiscountType(cartDiscount.type === 'fixed' ? 'FIXED' : 'PERCENT');
+                      setOrderDiscountValueInput(String(cartDiscount.value));
+                      setOrderDiscountModalOpen(true);
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, fontSize: '0.7rem', textDecoration: 'underline', fontWeight: 600 }}
+                  >
+                    Edit
+                  </button>
+                </span>
+                <span className="currency-amount" style={{ fontWeight: 700 }}>-${cartDiscountAmount.toFixed(2)}</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '1px 0' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderDiscountType('PERCENT');
+                    setOrderDiscountValueInput('');
+                    setOrderDiscountModalOpen(true);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    padding: '1px 0'
+                  }}
+                  title="Apply Today's Special Sale or Store-wide Discount"
+                >
+                  <Tag size={11} /> + Special Sale / Order Discount
+                </button>
+              </div>
+            )}
+
             {itemDiscountTotal > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#dc2626' }}>
                 <span>Item Promotional Discounts:</span>
                 <span className="currency-amount" style={{ fontWeight: 700 }}>-${itemDiscountTotal.toFixed(2)}</span>
+              </div>
+            )}
+
+            {discountTotal > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#16a34a', fontWeight: 700 }}>
+                <span>Total Customer Savings:</span>
+                <span className="currency-amount">-${discountTotal.toFixed(2)}</span>
               </div>
             )}
 
@@ -1967,6 +2007,194 @@ export default function PosCheckout() {
                   </button>
                   <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 700 }}>
                     Apply Discount
+                  </button>
+                </div>
+              </div>
+            </form>
+          );
+        })()}
+      </Modal>
+
+      {/* Modal: Today's Special Sale & Order Discount */}
+      <Modal
+        isOpen={orderDiscountModalOpen}
+        onClose={() => setOrderDiscountModalOpen(false)}
+        title="Today's Special Sale & Order Discount"
+        maxWidth="460px"
+      >
+        {(() => {
+          const valNum = parseFloat(orderDiscountValueInput) || 0;
+          const remainingAfterItemDiscounts = Math.max(0, subtotal - itemDiscountTotal);
+          let previewOrderDiscount = 0;
+          if (orderDiscountType === 'PERCENT') {
+            previewOrderDiscount = Math.round(((remainingAfterItemDiscounts * Math.min(100, Math.max(0, valNum))) / 100) * 100) / 100;
+          } else {
+            previewOrderDiscount = Math.min(remainingAfterItemDiscounts, Math.max(0, valNum));
+          }
+          const totalSavings = Math.round((itemDiscountTotal + previewOrderDiscount) * 100) / 100;
+          const previewGrandTotal = Math.max(0, Math.round((subtotal - totalSavings) * 100) / 100);
+
+          return (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (valNum > 0) {
+                  applyCartDiscount(orderDiscountType === 'PERCENT' ? 'percent' : 'fixed', valNum);
+                } else {
+                  applyCartDiscount('none', 0);
+                }
+                setOrderDiscountModalOpen(false);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+            >
+              <div style={{ fontSize: '0.825rem', color: '#475569' }}>
+                Apply store-wide campaigns, holiday events, or today's special sale discount to the whole cart.
+              </div>
+
+              {/* Discount Mode Selector */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '6px' }}>
+                  Select Campaign Discount Type:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${orderDiscountType === 'PERCENT' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setOrderDiscountType('PERCENT')}
+                    style={{ fontWeight: 700 }}
+                  >
+                    Percentage (%)
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${orderDiscountType === 'FIXED' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setOrderDiscountType('FIXED')}
+                    style={{ fontWeight: 700 }}
+                  >
+                    Fixed Dollar ($)
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Campaign Presets */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.75rem', marginBottom: '6px', color: '#475569' }}>
+                  Quick Campaign Presets:
+                </label>
+                {orderDiscountType === 'PERCENT' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                    {[
+                      { label: '5%', val: 5, tip: "Today's Special" },
+                      { label: '10%', val: 10, tip: 'Weekend Promo' },
+                      { label: '15%', val: 15, tip: 'VIP Member' },
+                      { label: '20%', val: 20, tip: 'Super Sale' },
+                      { label: '25%', val: 25, tip: 'Flash Deal' }
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        className={`btn btn-sm ${valNum === p.val ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '6px 0', fontSize: '0.78rem', fontWeight: 700 }}
+                        onClick={() => setOrderDiscountValueInput(String(p.val))}
+                        title={p.tip}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                    {[1.00, 2.00, 5.00, 10.00].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        className={`btn btn-sm ${valNum === amt ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '6px 0', fontSize: '0.78rem', fontWeight: 700 }}
+                        onClick={() => setOrderDiscountValueInput(String(amt))}
+                      >
+                        ${amt.toFixed(2)} Off
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Value Input */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem' }}>
+                  {orderDiscountType === 'PERCENT' ? 'Special Discount Percentage (%):' : 'Special Discount Amount ($ USD):'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    max={orderDiscountType === 'PERCENT' ? '100' : remainingAfterItemDiscounts}
+                    className="form-input mono"
+                    value={orderDiscountValueInput}
+                    onChange={(e) => setOrderDiscountValueInput(e.target.value)}
+                    placeholder={orderDiscountType === 'PERCENT' ? 'e.g. 10' : 'e.g. 5.00'}
+                    style={{ fontSize: '1rem', fontWeight: 700, paddingLeft: '12px' }}
+                    autoFocus
+                  />
+                  <span style={{ position: 'absolute', right: '12px', top: '10px', color: '#64748b', fontWeight: 700, fontSize: '0.85rem' }}>
+                    {orderDiscountType === 'PERCENT' ? '%' : '$ USD'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Preview Summary */}
+              <div
+                style={{
+                  padding: '10px 14px',
+                  backgroundColor: previewOrderDiscount > 0 ? '#f0fdf4' : '#f8fafc',
+                  border: `1px solid ${previewOrderDiscount > 0 ? '#bbf7d0' : '#e2e8f0'}`,
+                  borderRadius: '10px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Cart Subtotal: ${subtotal.toFixed(2)}</div>
+                  {itemDiscountTotal > 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#dc2626' }}>Item Discounts: -${itemDiscountTotal.toFixed(2)}</div>
+                  )}
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: previewOrderDiscount > 0 ? '#15803d' : '#64748b' }}>
+                    Order Sale Discount: -${previewOrderDiscount.toFixed(2)} {orderDiscountType === 'PERCENT' && valNum > 0 ? `(${valNum}%)` : ''}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.725rem', color: '#64748b' }}>New Grand Total</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e40af' }} className="currency-amount">
+                    ${previewGrandTotal.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 700 }}>
+                    Total Saved: -${totalSavings.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', paddingTop: '4px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ color: '#ef4444', borderColor: '#fecaca', fontWeight: 700 }}
+                  onClick={() => {
+                    applyCartDiscount('none', 0);
+                    setOrderDiscountValueInput('');
+                    setOrderDiscountModalOpen(false);
+                  }}
+                >
+                  Clear Sale Discount
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => setOrderDiscountModalOpen(false)} className="btn btn-outline btn-sm">
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 700 }}>
+                    Apply Special Discount
                   </button>
                 </div>
               </div>

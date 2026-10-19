@@ -134,6 +134,7 @@ const checkoutSchema = z.object({
   cashReceived: z.number().min(0).optional(),
   shiftId: z.string().uuid().optional().nullable(),
   customerId: z.string().uuid().optional().nullable(),
+  orderDiscount: z.number().min(0).optional().default(0),
   idempotencyKey: z.string().min(8, 'Idempotency key required to prevent duplicate checkouts'),
   notes: z.string().max(255).optional()
 });
