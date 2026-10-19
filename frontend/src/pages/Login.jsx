@@ -15,20 +15,13 @@ import { useAuth } from '../context/AuthContext';
 import { Alert } from '../components/common/LoadingSpinner';
 
 export default function Login() {
-  const [username, setUsername] = useState('cashier');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedDemo, setSelectedDemo] = useState('cashier');
 
   const { login, systemInitialized } = useAuth();
   const navigate = useNavigate();
-
-  const handleSelectDemo = (role, userVal, passVal) => {
-    setSelectedDemo(role);
-    setUsername(userVal);
-    setPassword(passVal);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -197,7 +190,7 @@ export default function Login() {
           </div>
 
           <div style={{ fontSize: '0.725rem', color: '#94a3b8', marginTop: '30px' }}>
-            © 2026 Supermarket POS Systems • School Project Edition
+            © 2026 Supermarket POS Systems • Enterprise Edition
           </div>
         </div>
 
@@ -245,56 +238,6 @@ export default function Login() {
 
           <Alert type="danger" message={error} onClose={() => setError('')} />
 
-          {/* School Demo 1-Click Role Switcher */}
-          <div
-            style={{
-              padding: '14px',
-              backgroundColor: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              marginBottom: '22px'
-            }}
-          >
-            <div
-              style={{
-                fontSize: '0.725rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                color: '#2563eb',
-                marginBottom: '8px'
-              }}
-            >
-              School Demo Roles (1-Click Fill)
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-              <button
-                type="button"
-                className={`btn btn-sm ${selectedDemo === 'owner' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ fontSize: '0.75rem', padding: '7px 4px' }}
-                onClick={() => handleSelectDemo('owner', 'owner', 'password123')}
-              >
-                👑 Owner
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${selectedDemo === 'cashier' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ fontSize: '0.75rem', padding: '7px 4px' }}
-                onClick={() => handleSelectDemo('cashier', 'cashier', 'password123')}
-              >
-                🛒 Cashier
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${selectedDemo === 'inventory' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ fontSize: '0.75rem', padding: '7px 4px' }}
-                onClick={() => handleSelectDemo('inventory', 'inventory', 'password123')}
-              >
-                📦 Inventory
-              </button>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -306,7 +249,7 @@ export default function Login() {
                 className="form-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. owner or cashier"
+                placeholder="Enter username (e.g. cashier, owner)"
               />
             </div>
 

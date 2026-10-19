@@ -22,8 +22,25 @@ export function PosProvider({ children }) {
   });
 
   const [currency, setCurrency] = useState('USD');
-  const [exchangeRate, setExchangeRate] = useState(4100);
+  const [exchangeRate, setExchangeRate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_exchange_rate');
+      return saved ? Number(saved) : 4100;
+    } catch {
+      return 4100;
+    }
+  });
   const [taxPercent, setTaxPercent] = useState(0);
+
+  // Whole cart order-level discount: { type: 'none' | 'percent' | 'fixed', value: number }
+  const [cartDiscount, setCartDiscount] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_active_cart_discount');
+      return saved ? JSON.parse(saved) : { type: 'none', value: 0 };
+    } catch {
+      return { type: 'none', value: 0 };
+    }
+  });
 
   // Sync active cart to localStorage
   useEffect(() => {
@@ -33,6 +50,31 @@ export function PosProvider({ children }) {
       console.warn('Failed to save cart to localStorage', e);
     }
   }, [cart]);
+
+  // Sync cart discount to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_active_cart_discount', JSON.stringify(cartDiscount));
+    } catch (e) {
+      console.warn('Failed to save cart discount to localStorage', e);
+    }
+  }, [cartDiscount]);
+
+  // Sync exchange rate to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_exchange_rate', exchangeRate.toString());
+    } catch (e) {}
+  }, [exchangeRate]);
+
+  // Apply or reset whole-order cart discount
+  const applyCartDiscount = (type, value) => {
+    if (type === 'none' || !value || Number(value) <= 0) {
+      setCartDiscount({ type: 'none', value: 0 });
+    } else {
+      setCartDiscount({ type, value: Number(value) });
+    }
+  };
 
   // Sync parked orders to localStorage
   useEffect(() => {
@@ -116,8 +158,10 @@ export function PosProvider({ children }) {
 
   const clearCart = () => {
     setCart([]);
+    setCartDiscount({ type: 'none', value: 0 });
     try {
       localStorage.removeItem('pos_active_cart');
+      localStorage.removeItem('pos_active_cart_discount');
     } catch {}
   };
 
@@ -133,8 +177,11 @@ export function PosProvider({ children }) {
       note: orderNote,
       createdAt: new Date().toISOString(),
       cart: [...cart],
+      cartDiscount: { ...cartDiscount },
       itemCount,
       subtotal,
+      itemDiscountTotal,
+      cartDiscountAmount,
       discountTotal,
       grandTotal,
       currency
@@ -151,6 +198,11 @@ export function PosProvider({ children }) {
     if (!order) return false;
 
     setCart(order.cart);
+    if (order.cartDiscount) {
+      setCartDiscount(order.cartDiscount);
+    } else {
+      setCartDiscount({ type: 'none', value: 0 });
+    }
     setParkedOrders((prev) => prev.filter((p) => p.id !== parkedId));
     return true;
   };
@@ -160,26 +212,39 @@ export function PosProvider({ children }) {
     setParkedOrders((prev) => prev.filter((p) => p.id !== parkedId));
   };
 
-  // Memoized Totals
-  const { subtotal, discountTotal, taxTotal, grandTotal } = useMemo(() => {
+  // Memoized Totals with Both Item-Level & Whole-Cart Discounts
+  const { subtotal, itemDiscountTotal, cartDiscountAmount, discountTotal, taxTotal, grandTotal } = useMemo(() => {
     let sub = 0;
-    let disc = 0;
+    let itemDisc = 0;
 
     cart.forEach((item) => {
       sub += item.quantity * Number(item.product.sellingPrice);
-      disc += Number(item.discount || 0);
+      itemDisc += Number(item.discount || 0);
     });
 
-    const tax = sub * (taxPercent / 100);
-    const grand = Math.max(0, sub - disc + tax);
+    // Whole-cart discount calculation
+    let cDisc = 0;
+    const remainingAfterItemDiscounts = Math.max(0, sub - itemDisc);
+    if (cartDiscount.type === 'percent') {
+      cDisc = (remainingAfterItemDiscounts * (Number(cartDiscount.value) || 0)) / 100;
+    } else if (cartDiscount.type === 'fixed') {
+      cDisc = Math.min(remainingAfterItemDiscounts, Number(cartDiscount.value) || 0);
+    }
+    cDisc = Math.round(cDisc * 100) / 100;
+
+    const totalDisc = Math.round((itemDisc + cDisc) * 100) / 100;
+    const tax = Math.round((Math.max(0, sub - totalDisc) * (taxPercent / 100)) * 100) / 100;
+    const grand = Math.max(0, Math.round((sub - totalDisc + tax) * 100) / 100);
 
     return {
       subtotal: Math.round(sub * 100) / 100,
-      discountTotal: Math.round(disc * 100) / 100,
-      taxTotal: Math.round(tax * 100) / 100,
-      grandTotal: Math.round(grand * 100) / 100
+      itemDiscountTotal: Math.round(itemDisc * 100) / 100,
+      cartDiscountAmount: cDisc,
+      discountTotal: totalDisc,
+      taxTotal: tax,
+      grandTotal: grand
     };
-  }, [cart, taxPercent]);
+  }, [cart, taxPercent, cartDiscount]);
 
   return (
     <PosContext.Provider
@@ -191,6 +256,8 @@ export function PosProvider({ children }) {
         removeFromCart,
         clearCart,
         subtotal,
+        itemDiscountTotal,
+        cartDiscountAmount,
         discountTotal,
         taxTotal,
         grandTotal,
@@ -198,6 +265,9 @@ export function PosProvider({ children }) {
         setCurrency,
         exchangeRate,
         setExchangeRate,
+        cartDiscount,
+        setCartDiscount,
+        applyCartDiscount,
         taxPercent,
         setTaxPercent,
         parkedOrders,

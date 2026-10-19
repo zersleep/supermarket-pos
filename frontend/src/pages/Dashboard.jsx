@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -13,7 +13,8 @@ import {
   Store,
   UserCheck,
   Truck,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import api from '../api/client';
 import { StatCard, LoadingSpinner, Alert } from '../components/common/LoadingSpinner';
@@ -21,6 +22,8 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState('');
   const [stats, setStats] = useState({
     todayRevenue: 0,
@@ -39,63 +42,91 @@ export default function Dashboard() {
   const isInventoryManager = user?.role === 'INVENTORY_MANAGER';
   const isCashier = user?.role === 'CASHIER';
 
-  useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        setLoading(true);
-        setError('');
+  const fetchDashboardData = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) setLoading(true);
+      else setIsRefreshing(true);
+      setError('');
 
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
 
-        // Fetch data based on role permissions
-        const promises = [
-          api.get('/inventory/summary').catch(() => ({ data: {} })),
-          api.get('/sales?limit=6').catch(() => ({ data: [] }))
-        ];
+      // Fetch data based on role permissions
+      const promises = [
+        api.get('/inventory/summary').catch(() => ({ data: {} })),
+        api.get('/sales?limit=8').catch(() => ({ data: [] }))
+      ];
 
-        // Only fetch financial & payment endpoints if user has access
-        if (canViewReports || canOperatePos) {
-          promises.push(
-            api.get(`/reports/sales?startDate=${todayStart.toISOString()}`).catch(() => ({ data: { summary: {} } }))
-          );
-        }
-
-        if (canOperatePos) {
-          promises.push(
-            api.get('/payments/pending?limit=1').catch(() => ({ pagination: { total: 0 } }))
-          );
-        }
-
-        const [invRes, recentSalesRes, salesRes, pendingRes] = await Promise.all(promises);
-
-        const invSummary = invRes.data || {};
-        const recent = recentSalesRes.data || [];
-        const summary = salesRes?.data?.summary || {};
-        const pendingCount = pendingRes?.pagination?.total || 0;
-
-        setStats({
-          todayRevenue: summary.totalRevenue || 0,
-          todaySalesCount: summary.completedSalesCount || 0,
-          totalProducts: invSummary.totalProducts || 0,
-          lowStockCount: invSummary.lowStockCount || 0,
-          expiringCount: invSummary.expiringCount || 0,
-          expiredCount: invSummary.expiredCount || 0,
-          pendingPaymentsCount: pendingCount,
-          recentSales: recent
-        });
-      } catch (err) {
-        setError(err.message || 'Failed to load dashboard data.');
-      } finally {
-        setLoading(false);
+      // Financial & payment endpoints with local-day boundary
+      if (canViewReports || canOperatePos) {
+        promises.push(
+          api.get(`/reports/sales?startDate=${encodeURIComponent(todayStart.toISOString())}&endDate=${encodeURIComponent(todayEnd.toISOString())}`).catch(() => ({ data: { summary: {} } }))
+        );
       }
-    }
 
-    fetchDashboardData();
+      if (canOperatePos) {
+        promises.push(
+          api.get('/payments/pending?limit=1').catch(() => ({ pagination: { total: 0 } }))
+        );
+      }
+
+      const [invRes, recentSalesRes, salesRes, pendingRes] = await Promise.all(promises);
+
+      const invSummary = invRes.data || {};
+      const recent = recentSalesRes.data || [];
+      const summary = salesRes?.data?.summary || {};
+      const pendingCount = pendingRes?.pagination?.total || 0;
+
+      setStats({
+        todayRevenue: summary.totalRevenue || 0,
+        todaySalesCount: summary.completedSalesCount || 0,
+        totalProducts: invSummary.totalProducts || 0,
+        lowStockCount: invSummary.lowStockCount || 0,
+        expiringCount: invSummary.expiringCount || 0,
+        expiredCount: invSummary.expiredCount || 0,
+        pendingPaymentsCount: pendingCount,
+        recentSales: recent
+      });
+      setLastUpdated(new Date());
+    } catch (err) {
+      if (!isSilent) {
+        setError(err.message || 'Failed to load dashboard data.');
+      }
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
   }, [canOperatePos, canViewReports]);
 
-  if (loading) {
-    return <LoadingSpinner text="Loading dashboard metrics..." />;
+  useEffect(() => {
+    fetchDashboardData(false);
+
+    // Auto-refresh when user focuses or returns to window
+    const handleFocus = () => {
+      fetchDashboardData(true);
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData(true);
+      }
+    });
+
+    // Background polling every 15 seconds so new sales appear live
+    const pollInterval = setInterval(() => {
+      fetchDashboardData(true);
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(pollInterval);
+    };
+  }, [fetchDashboardData]);
+
+  if (loading && !lastUpdated) {
+    return <LoadingSpinner text="Loading real-time supermarket telemetry..." />;
   }
 
   const khrExchangeRate = 4100;
@@ -103,6 +134,12 @@ export default function Dashboard() {
 
   return (
     <div>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       {/* Hero Welcome Banner */}
       <div
         className="card"
@@ -119,7 +156,7 @@ export default function Dashboard() {
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <span
               className="badge"
               style={{
@@ -140,6 +177,23 @@ export default function Dashboard() {
             >
               <UserCheck size={12} /> {user?.role?.replace('_', ' ')}
             </span>
+            {lastUpdated && (
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#dbeafe',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  padding: '2px 8px',
+                  borderRadius: '6px'
+                }}
+              >
+                ● Live Sync: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            )}
           </div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
             Welcome back, {user?.fullName || user?.username}!
@@ -152,7 +206,51 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Action Buttons */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={() => fetchDashboardData(false)}
+            disabled={isRefreshing}
+            className="btn btn-outline"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: '#ffffff',
+              border: '1.5px solid rgba(255, 255, 255, 0.45)',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: isRefreshing ? 'wait' : 'pointer',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isRefreshing) {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.32)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.45)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            title="Refresh sales and metrics now"
+          >
+            <RefreshCw
+              size={16}
+              color="#ffffff"
+              style={{
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+              }}
+            />
+            {isRefreshing ? 'Syncing...' : 'Refresh'}
+          </button>
           {canOperatePos && (
             <button
               onClick={() => navigate('/pos')}

@@ -48,6 +48,8 @@ export default function PosCheckout() {
     removeFromCart,
     clearCart,
     subtotal,
+    itemDiscountTotal,
+    cartDiscountAmount,
     discountTotal,
     taxTotal,
     grandTotal,
@@ -55,6 +57,9 @@ export default function PosCheckout() {
     setCurrency,
     exchangeRate,
     setExchangeRate,
+    cartDiscount,
+    setCartDiscount,
+    applyCartDiscount,
     parkedOrders,
     parkCart,
     resumeParkedOrder,
@@ -74,10 +79,19 @@ export default function PosCheckout() {
   const [error, setError] = useState('');
   const [scanToast, setScanToast] = useState('');
 
-  // Modals for Parked Orders & Discounts
+  // Modals for Parked Orders, Custom Discounts, and Exchange Rate
   const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdNoteInput, setHoldNoteInput] = useState('');
   const [parkedListModalOpen, setParkedListModalOpen] = useState(false);
+
+  // Custom whole-cart discount modal state
+  const [cartDiscountModalOpen, setCartDiscountModalOpen] = useState(false);
+  const [customCartDiscountType, setCustomCartDiscountType] = useState('PERCENT'); // 'PERCENT' or 'FIXED'
+  const [customCartDiscountValue, setCustomCartDiscountValue] = useState('');
+
+  // Custom exchange rate modal state
+  const [exchangeModalOpen, setExchangeModalOpen] = useState(false);
+  const [customRateInput, setCustomRateInput] = useState('');
 
   // Line item discount modal state
   const [discountModalItem, setDiscountModalItem] = useState(null);
@@ -487,12 +501,29 @@ export default function PosCheckout() {
     const idempotencyKey = `pos-tx-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     try {
-      const payload = {
-        items: cart.map((i) => ({
+      // Proportionally distribute whole-cart discount across items for authoritative backend line-item totals
+      let remainingCartDisc = cartDiscountAmount;
+      const itemsPayload = cart.map((i, idx) => {
+        const itemGross = i.quantity * Number(i.product.sellingPrice);
+        let itemExtraDisc = 0;
+        if (cartDiscountAmount > 0 && subtotal > 0) {
+          if (idx === cart.length - 1) {
+            itemExtraDisc = Math.max(0, remainingCartDisc);
+          } else {
+            itemExtraDisc = Math.round(((itemGross / subtotal) * cartDiscountAmount) * 100) / 100;
+            remainingCartDisc = Math.max(0, remainingCartDisc - itemExtraDisc);
+          }
+        }
+        const finalItemDisc = Math.min(itemGross, Math.round(((Number(i.discount) || 0) + itemExtraDisc) * 100) / 100);
+        return {
           productId: i.product.id,
           quantity: i.quantity,
-          discount: i.discount || 0
-        })),
+          discount: finalItemDisc
+        };
+      });
+
+      const payload = {
+        items: itemsPayload,
         paymentMethod,
         currency,
         cashReceived: paymentMethod === 'CASH' ? numericCash : undefined,
@@ -849,18 +880,18 @@ export default function PosCheckout() {
             .pos-product-card-title {
               font-family: var(--font-display);
               font-weight: 700;
-              font-size: 0.95rem;
+              font-size: 0.875rem;
               color: #0f172a;
-              line-height: 1.35;
-              min-height: 2.7em;
-              max-height: 2.7em;
+              line-height: 1.3;
+              min-height: 2.6em;
+              max-height: 2.6em;
               overflow: hidden;
               text-overflow: ellipsis;
               display: -webkit-box;
               -webkit-line-clamp: 2;
               -webkit-box-orient: vertical;
-              margin-top: 12px;
-              margin-bottom: 6px;
+              margin-top: 8px;
+              margin-bottom: 4px;
               word-break: break-word;
             }
           `}</style>
@@ -900,7 +931,7 @@ export default function PosCheckout() {
                     }}
                     style={{
                       border: '1.5px solid #e2e8f0',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       overflow: 'hidden',
                       backgroundColor: '#ffffff',
                       display: 'flex',
@@ -908,37 +939,37 @@ export default function PosCheckout() {
                       cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                       opacity: isOutOfStock ? 0.6 : 1,
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.04)',
                       userSelect: 'none',
-                      padding: '14px',
-                      minHeight: '370px'
+                      padding: '11px',
+                      minHeight: '265px'
                     }}
                     onMouseEnter={(e) => {
                       if (!isOutOfStock) {
                         e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.transform = 'translateY(-3px)';
-                        e.currentTarget.style.boxShadow = '0 10px 22px rgba(37, 99, 235, 0.15)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 18px rgba(37, 99, 235, 0.12)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.04)';
+                      e.currentTarget.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.04)';
                     }}
                   >
-                    {/* Picture Display inside Product Card Box - Taller for Clear Visibility */}
+                    {/* Picture Display inside Product Card Box - Compact & Balanced */}
                     <div
                       style={{
-                        height: '190px',
-                        minHeight: '190px',
+                        height: '120px',
+                        minHeight: '120px',
                         width: '100%',
                         backgroundColor: '#f8fafc',
-                        borderRadius: '12px',
+                        borderRadius: '10px',
                         border: '1px solid #e2e8f0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '12px',
+                        padding: '6px',
                         overflow: 'hidden',
                         position: 'relative'
                       }}
@@ -962,7 +993,7 @@ export default function PosCheckout() {
                         }}
                         loading="eager"
                         onMouseEnter={(e) => {
-                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.06)';
+                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.05)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'scale(1)';
@@ -970,7 +1001,7 @@ export default function PosCheckout() {
                       />
                     </div>
 
-                    {/* Product Name - Always Visible & Bold */}
+                    {/* Product Name - Always Visible & Compact */}
                     <div
                       className="pos-product-card-title"
                       title={p.name}
@@ -979,14 +1010,14 @@ export default function PosCheckout() {
                     </div>
 
                     {/* Product ID & Barcode */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', flexWrap: 'wrap' }}>
                       <span
                         style={{
                           fontSize: '0.7rem',
                           fontWeight: 700,
                           backgroundColor: '#eff6ff',
                           color: '#1d4ed8',
-                          padding: '2px 7px',
+                          padding: '1px 6px',
                           borderRadius: '5px',
                           border: '1px solid #bfdbfe'
                         }}
@@ -1011,8 +1042,8 @@ export default function PosCheckout() {
                     </div>
 
                     {/* Category & Stock Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '10px' }}>
-                      <span style={{ color: '#475569', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '5px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '6px' }}>
+                      <span style={{ color: '#475569', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
                         {p.category?.name || 'General'}
                       </span>
                       <span
@@ -1041,7 +1072,7 @@ export default function PosCheckout() {
                     <div
                       style={{
                         marginTop: 'auto',
-                        paddingTop: '10px',
+                        paddingTop: '6px',
                         borderTop: '1px solid #f1f5f9',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -1335,17 +1366,155 @@ export default function PosCheckout() {
             )}
           </div>
 
+          {/* Whole-Cart Order Discount Selector */}
+          <div
+            style={{
+              padding: '7px 10px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              marginTop: '6px',
+              marginBottom: '4px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Order Discount
+              </span>
+              {cartDiscount.type !== 'none' && (
+                <span style={{ fontSize: '0.725rem', color: '#dc2626', fontWeight: 700 }}>
+                  -{cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`} (-${cartDiscountAmount.toFixed(2)})
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              <button
+                type="button"
+                className={`btn btn-sm ${cartDiscount.type === 'none' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
+                onClick={() => applyCartDiscount('none', 0)}
+              >
+                0%
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${cartDiscount.type === 'percent' && cartDiscount.value === 5 ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
+                onClick={() => applyCartDiscount('percent', 5)}
+              >
+                5%
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${cartDiscount.type === 'percent' && cartDiscount.value === 10 ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
+                onClick={() => applyCartDiscount('percent', 10)}
+              >
+                10%
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${cartDiscount.type === 'percent' && cartDiscount.value === 15 ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flex: 1, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
+                onClick={() => applyCartDiscount('percent', 15)}
+              >
+                15%
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${(cartDiscount.type === 'fixed' || (cartDiscount.type === 'percent' && ![0, 5, 10, 15].includes(cartDiscount.value))) ? 'btn-primary' : 'btn-outline'}`}
+                style={{ flex: 1.2, padding: '3px 0', fontSize: '0.675rem', fontWeight: 700, height: '25px' }}
+                onClick={() => {
+                  setCustomCartDiscountType(cartDiscount.type === 'fixed' ? 'FIXED' : 'PERCENT');
+                  setCustomCartDiscountValue(cartDiscount.value > 0 ? String(cartDiscount.value) : '');
+                  setCartDiscountModalOpen(true);
+                }}
+              >
+                Custom
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Exchange Rate Selector */}
+          <div
+            style={{
+              padding: '6px 10px',
+              backgroundColor: '#eff6ff',
+              borderRadius: '8px',
+              border: '1px solid #bfdbfe',
+              marginBottom: '6px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#1e40af' }}>
+              $1 = {exchangeRate.toLocaleString()} ៛
+            </span>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              {[4000, 4100, 4150].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  className={`btn btn-sm ${exchangeRate === rate ? 'btn-primary' : 'btn-outline'}`}
+                  style={{
+                    padding: '1px 6px',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    height: '23px'
+                  }}
+                  onClick={() => setExchangeRate(rate)}
+                >
+                  {rate}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`btn btn-sm ${![4000, 4100, 4150].includes(exchangeRate) ? 'btn-primary' : 'btn-outline'}`}
+                style={{
+                  padding: '1px 6px',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  height: '23px'
+                }}
+                onClick={() => {
+                  setCustomRateInput(exchangeRate.toString());
+                  setExchangeModalOpen(true);
+                }}
+              >
+                Custom
+              </button>
+            </div>
+          </div>
+
           {/* Totals Summary Banner */}
-          <div style={{ padding: '10px 0 8px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ padding: '4px 0 6px 0', display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b' }}>
               <span>Subtotal:</span>
               <span className="currency-amount" style={{ fontWeight: 700 }}>${subtotal.toFixed(2)}</span>
             </div>
 
-            {discountTotal > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#dc2626' }}>
-                <span>Total Discount:</span>
-                <span className="currency-amount" style={{ fontWeight: 700 }}>-${discountTotal.toFixed(2)}</span>
+            {itemDiscountTotal > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#dc2626' }}>
+                <span>Item Discounts:</span>
+                <span className="currency-amount" style={{ fontWeight: 700 }}>-${itemDiscountTotal.toFixed(2)}</span>
+              </div>
+            )}
+
+            {cartDiscountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#dc2626' }}>
+                <span>
+                  Order Discount ({cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`}):
+                </span>
+                <span className="currency-amount" style={{ fontWeight: 700 }}>-${cartDiscountAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            {discountTotal > 0 && (itemDiscountTotal > 0 && cartDiscountAmount > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#b91c1c', fontWeight: 700 }}>
+                <span>Total Savings:</span>
+                <span className="currency-amount">-${discountTotal.toFixed(2)}</span>
               </div>
             )}
 
@@ -1355,7 +1524,7 @@ export default function PosCheckout() {
                 justifyContent: 'space-between',
                 alignItems: 'baseline',
                 borderTop: '1px solid #e2e8f0',
-                paddingTop: '8px',
+                paddingTop: '6px',
                 marginTop: '2px'
               }}
             >
@@ -1774,6 +1943,149 @@ export default function PosCheckout() {
                 Apply Discount
               </button>
             </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Custom Cart Discount */}
+      <Modal
+        isOpen={cartDiscountModalOpen}
+        onClose={() => setCartDiscountModalOpen(false)}
+        title="Custom Whole-Order Discount"
+        maxWidth="440px"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const val = parseFloat(customCartDiscountValue) || 0;
+            if (val > 0) {
+              applyCartDiscount(customCartDiscountType === 'PERCENT' ? 'percent' : 'fixed', val);
+            } else {
+              applyCartDiscount('none', 0);
+            }
+            setCartDiscountModalOpen(false);
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+        >
+          <div>
+            <label className="form-label">Discount Type:</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <button
+                type="button"
+                className={`btn btn-sm ${customCartDiscountType === 'PERCENT' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setCustomCartDiscountType('PERCENT')}
+              >
+                Percentage (%)
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${customCartDiscountType === 'FIXED' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setCustomCartDiscountType('FIXED')}
+              >
+                Fixed Dollar ($)
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="form-label">
+              {customCartDiscountType === 'PERCENT' ? 'Order Discount Percentage (%):' : 'Order Discount Amount ($ USD):'}
+            </label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              max={customCartDiscountType === 'PERCENT' ? '100' : undefined}
+              className="form-input mono"
+              value={customCartDiscountValue}
+              onChange={(e) => setCustomCartDiscountValue(e.target.value)}
+              placeholder={customCartDiscountType === 'PERCENT' ? 'e.g. 12' : 'e.g. 3.00'}
+              autoFocus
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              style={{ color: '#ef4444', borderColor: '#fecaca' }}
+              onClick={() => {
+                applyCartDiscount('none', 0);
+                setCartDiscountModalOpen(false);
+              }}
+            >
+              Clear Discount
+            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={() => setCartDiscountModalOpen(false)} className="btn btn-outline btn-sm">
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary btn-sm">
+                Apply to Cart
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Custom Exchange Rate */}
+      <Modal
+        isOpen={exchangeModalOpen}
+        onClose={() => setExchangeModalOpen(false)}
+        title="Custom KHR Exchange Rate"
+        maxWidth="420px"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const val = parseInt(customRateInput, 10);
+            if (val && val > 0) {
+              setExchangeRate(val);
+            }
+            setExchangeModalOpen(false);
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+        >
+          <div style={{ fontSize: '0.85rem', color: '#475569' }}>
+            Set the live or store-defined exchange rate for <strong>$1.00 USD</strong>. All cash totals, change, and QR conversions will update immediately.
+          </div>
+
+          <div>
+            <label className="form-label">Exchange Rate (1 USD = ? KHR):</label>
+            <input
+              type="number"
+              step="1"
+              min="1000"
+              max="10000"
+              className="form-input mono"
+              value={customRateInput}
+              onChange={(e) => setCustomRateInput(e.target.value)}
+              placeholder="e.g. 4100"
+              autoFocus
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {[4000, 4100, 4125, 4150].map((r) => (
+              <button
+                key={r}
+                type="button"
+                className="btn btn-sm btn-outline mono"
+                style={{ flex: 1, fontSize: '0.725rem', padding: '4px 0' }}
+                onClick={() => setCustomRateInput(String(r))}
+              >
+                {r} ៛
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+            <button type="button" onClick={() => setExchangeModalOpen(false)} className="btn btn-outline btn-sm">
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary btn-sm">
+              Save Rate
+            </button>
           </div>
         </form>
       </Modal>
