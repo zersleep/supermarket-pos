@@ -26,10 +26,77 @@ const CATEGORY_IMAGE_MAP = {
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80';
 
 /**
+ * High-quality SVG Graphic Fallback for offline or missing images
+ */
+export function getProductSvgPlaceholder(product) {
+  const catName = (product?.category?.name || '').toLowerCase();
+  const name = (product?.name || '').toLowerCase();
+  const sku = product?.sku || 'PROD';
+
+  let bgColor1 = '#3b82f6';
+  let bgColor2 = '#1d4ed8';
+  let iconEmoji = '🛒';
+  let label = 'Supermarket Item';
+
+  if (catName.includes('beverage') || name.includes('water') || name.includes('coke') || name.includes('beer')) {
+    bgColor1 = '#0284c7';
+    bgColor2 = '#0369a1';
+    iconEmoji = '🥤';
+    label = 'Beverage';
+  } else if (catName.includes('dairy') || name.includes('milk') || name.includes('egg')) {
+    bgColor1 = '#0ea5e9';
+    bgColor2 = '#0284c7';
+    iconEmoji = '🥛';
+    label = 'Dairy & Eggs';
+  } else if (catName.includes('bakery') || name.includes('bread') || name.includes('baguette')) {
+    bgColor1 = '#f59e0b';
+    bgColor2 = '#b45309';
+    iconEmoji = '🥖';
+    label = 'Fresh Bakery';
+  } else if (catName.includes('pantry') || name.includes('rice') || name.includes('noodle')) {
+    bgColor1 = '#ea580c';
+    bgColor2 = '#c2410c';
+    iconEmoji = '🍚';
+    label = 'Pantry & Grains';
+  } else if (catName.includes('snack') || name.includes('chip') || name.includes('lay')) {
+    bgColor1 = '#ec4899';
+    bgColor2 = '#be185d';
+    iconEmoji = '🍿';
+    label = 'Snacks & Sweets';
+  } else if (catName.includes('produce') || name.includes('fruit') || name.includes('veg')) {
+    bgColor1 = '#10b981';
+    bgColor2 = '#047857';
+    iconEmoji = '🍎';
+    label = 'Fresh Produce';
+  } else if (catName.includes('household') || name.includes('clean')) {
+    bgColor1 = '#8b5cf6';
+    bgColor2 = '#6d28d9';
+    iconEmoji = '🧼';
+    label = 'Household Care';
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${bgColor1}" stop-opacity="0.14"/>
+        <stop offset="100%" stop-color="${bgColor2}" stop-opacity="0.28"/>
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" rx="12" fill="url(#bg)"/>
+    <rect x="1" y="1" width="298" height="198" rx="11" fill="none" stroke="${bgColor1}" stroke-opacity="0.35" stroke-width="1.5"/>
+    <text x="50%" y="42%" text-anchor="middle" font-size="44">${iconEmoji}</text>
+    <text x="50%" y="68%" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="700" font-size="13" fill="${bgColor2}">${label}</text>
+    <text x="50%" y="84%" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="600" font-size="11" fill="#475569">SKU: ${sku}</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/**
  * Returns a high-res image URL for any product based on SKU, category, or direct URL
  */
 export function getProductImageUrl(product) {
-  if (!product) return DEFAULT_IMAGE;
+  if (!product) return getProductSvgPlaceholder(null);
 
   // Direct product image property if set
   if (product.imageUrl) return product.imageUrl;
@@ -59,7 +126,7 @@ export function getProductImageUrl(product) {
     return CATEGORY_IMAGE_MAP[catName];
   }
 
-  return DEFAULT_IMAGE;
+  return getProductSvgPlaceholder(product);
 }
 
 /**

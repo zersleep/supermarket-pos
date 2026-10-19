@@ -33,6 +33,7 @@ import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
 import {
   getProductImageUrl,
+  getProductSvgPlaceholder,
   playScannerBeep,
   playCashChime,
   playErrorTone
@@ -706,9 +707,9 @@ export default function PosCheckout() {
           )}
 
           {/* Top Controls Bar: Scanner & Search */}
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {/* Barcode Scanner Input */}
-            <form onSubmit={handleBarcodeSubmit} style={{ flex: 1, position: 'relative' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Spacious Barcode Scanner Input */}
+            <form onSubmit={handleBarcodeSubmit} style={{ flex: 1, minWidth: '280px', position: 'relative' }}>
               <Barcode
                 size={20}
                 style={{ position: 'absolute', left: '14px', top: '11px', color: '#2563eb' }}
@@ -719,57 +720,87 @@ export default function PosCheckout() {
                 className="form-input"
                 style={{
                   paddingLeft: '44px',
-                  paddingRight: '250px',
-                  fontWeight: 500,
+                  paddingRight: '80px',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
                   backgroundColor: '#ffffff',
                   borderColor: scanToast ? '#10b981' : '#cbd5e1'
                 }}
-                placeholder="Scan barcode or type SKU (Press Enter or [F1])..."
+                placeholder="Scan barcode or enter SKU [F1]..."
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 autoFocus
               />
-              <div style={{ position: 'absolute', right: '6px', top: '5px', display: 'flex', gap: '4px' }}>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={() => setCameraScannerOpen(true)}
-                  title="Open Camera / Real Barcode Scanner"
-                  style={{ fontSize: '0.725rem', padding: '5px 8px', color: '#1e40af', borderColor: '#bfdbfe' }}
-                >
-                  <Camera size={13} /> Camera
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
-                  title="Toggle 1-Click Demo Barcode Scanner [F2]"
-                  style={{ fontSize: '0.725rem', padding: '5px 8px', color: '#2563eb', borderColor: '#bfdbfe' }}
-                >
-                  <Zap size={13} /> {showDemoBarcodes ? 'Hide' : 'Barcodes'}
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-sm"
-                  style={{ fontSize: '0.75rem', padding: '5px 12px' }}
-                  title="Scan barcode or open scanner"
-                >
-                  Scan
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm"
+                style={{
+                  position: 'absolute',
+                  right: '6px',
+                  top: '5px',
+                  fontSize: '0.78rem',
+                  padding: '5px 14px',
+                  fontWeight: 700
+                }}
+                title="Scan barcode or trigger live camera"
+              >
+                Scan
+              </button>
             </form>
 
+            {/* Dedicated Camera Viewfinder Button */}
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setCameraScannerOpen(true)}
+              title="Open Live Camera Barcode Reader"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 14px',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                color: '#166534',
+                borderColor: '#bbf7d0',
+                backgroundColor: '#f0fdf4'
+              }}
+            >
+              <Camera size={16} color="#16a34a" /> Camera Scan
+            </button>
+
+            {/* Dedicated Quick Test Barcodes Button */}
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
+              title="Toggle Quick Test Barcodes [F2]"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 13px',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                color: '#1d4ed8',
+                borderColor: showDemoBarcodes ? '#2563eb' : '#bfdbfe',
+                backgroundColor: showDemoBarcodes ? '#eff6ff' : '#ffffff'
+              }}
+            >
+              <Zap size={15} color="#2563eb" /> {showDemoBarcodes ? 'Hide Barcodes' : 'Test Barcodes'}
+            </button>
+
             {/* Search Filter */}
-            <div style={{ position: 'relative', width: '260px' }}>
+            <div style={{ position: 'relative', width: '220px' }}>
               <Search
-                size={18}
-                style={{ position: 'absolute', left: '14px', top: '12px', color: '#64748b' }}
+                size={17}
+                style={{ position: 'absolute', left: '13px', top: '12px', color: '#64748b' }}
               />
               <input
                 type="text"
                 className="form-input"
-                style={{ paddingLeft: '40px', paddingRight: searchQuery ? '32px' : '14px' }}
-                placeholder="Search catalog (/)..."
+                style={{ paddingLeft: '38px', paddingRight: searchQuery ? '32px' : '12px', fontSize: '0.85rem' }}
+                placeholder="Search items (/)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -787,7 +818,7 @@ export default function PosCheckout() {
                     cursor: 'pointer'
                   }}
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               )}
             </div>
@@ -884,6 +915,23 @@ export default function PosCheckout() {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
               }
             }
+            .pos-product-card-title {
+              font-family: var(--font-display);
+              font-weight: 700;
+              font-size: 0.92rem;
+              color: #0f172a;
+              line-height: 1.35;
+              min-height: 2.7em;
+              max-height: 2.7em;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+              margin-top: 10px;
+              margin-bottom: 6px;
+              word-break: break-word;
+            }
           `}</style>
           <div
             className="pos-product-grid"
@@ -952,13 +1000,14 @@ export default function PosCheckout() {
                         height: '145px',
                         width: '100%',
                         backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         border: '1px solid #f1f5f9',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         padding: '10px',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        position: 'relative'
                       }}
                     >
                       <img
@@ -966,7 +1015,7 @@ export default function PosCheckout() {
                         alt={p.name}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80';
+                          e.target.src = getProductSvgPlaceholder(p);
                         }}
                         style={{
                           maxWidth: '100%',
@@ -978,7 +1027,7 @@ export default function PosCheckout() {
                           margin: '0 auto',
                           transition: 'transform 0.25s ease'
                         }}
-                        loading="lazy"
+                        loading="eager"
                         onMouseEnter={(e) => {
                           if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.05)';
                         }}
@@ -988,24 +1037,12 @@ export default function PosCheckout() {
                       />
                     </div>
 
-                    {/* Product Name */}
+                    {/* Product Name - Always Visible */}
                     <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
-                        color: '#0f172a',
-                        lineHeight: 1.35,
-                        height: '38px',
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        marginTop: '10px',
-                        marginBottom: '4px'
-                      }}
+                      className="pos-product-card-title"
                       title={p.name}
                     >
-                      {p.name}
+                      {p.name || p.sku || 'Unnamed Product'}
                     </div>
 
                     {/* Product ID & Barcode */}
@@ -1243,9 +1280,30 @@ export default function PosCheckout() {
                     gap: '5px'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '0.85rem' }}>
-                    <span style={{ color: '#0f172a' }}>{item.product.name}</span>
-                    <span className="mono" style={{ color: '#2563eb', fontWeight: 700 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+                      <img
+                        src={getProductImageUrl(item.product)}
+                        alt={item.product.name}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = getProductSvgPlaceholder(item.product);
+                        }}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          objectFit: 'contain',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          flexShrink: 0
+                        }}
+                      />
+                      <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.product.name}
+                      </span>
+                    </div>
+                    <span className="currency-amount" style={{ color: '#1e40af', fontWeight: 800, fontSize: '0.9rem', flexShrink: 0 }}>
                       ${Number(item.lineTotal).toFixed(2)}
                     </span>
                   </div>
@@ -2089,7 +2147,7 @@ export default function PosCheckout() {
                     <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.name}
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: '#2563eb', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 700 }} className="currency-amount">
                       ⚡ {code}
                     </span>
                   </button>
