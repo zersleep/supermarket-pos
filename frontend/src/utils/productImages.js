@@ -43,12 +43,15 @@ export function getProductImageUrl(product) {
   const name = (product.name || '').toLowerCase();
   if (name.includes('water')) return PRODUCT_IMAGE_MAP['BEV-VIT-500'];
   if (name.includes('coke') || name.includes('cola')) return PRODUCT_IMAGE_MAP['BEV-COKE-330'];
+  if (name.includes('sting') || name.includes('energy')) return 'https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=500&auto=format&fit=crop&q=80';
   if (name.includes('milk')) return PRODUCT_IMAGE_MAP['DAI-MILK-1L'];
   if (name.includes('egg')) return PRODUCT_IMAGE_MAP['DAI-EGGS-10P'];
   if (name.includes('bread') || name.includes('baguette')) return PRODUCT_IMAGE_MAP['BAK-BAGU-250'];
   if (name.includes('rice')) return PRODUCT_IMAGE_MAP['PAN-RICE-5KG'];
   if (name.includes('noodle')) return PRODUCT_IMAGE_MAP['PAN-NOOD-BOX'];
   if (name.includes('chip') || name.includes('lay')) return PRODUCT_IMAGE_MAP['SNK-LAYS-50G'];
+  if (name.includes('beer') || name.includes('angkor')) return 'https://images.unsplash.com/photo-1608270199047-9e7ecba4fc3d?w=500&auto=format&fit=crop&q=80';
+  if (name.includes('coffee') || name.includes('nescafe')) return 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&auto=format&fit=crop&q=80';
 
   // Category match
   const catName = (product.category?.name || '').toLowerCase();

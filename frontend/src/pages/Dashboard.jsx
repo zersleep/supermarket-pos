@@ -156,15 +156,32 @@ export default function Dashboard() {
           {canOperatePos && (
             <button
               onClick={() => navigate('/pos')}
-              className="btn btn-primary btn-lg"
+              className="btn btn-lg"
               style={{
                 backgroundColor: '#ffffff',
-                color: '#1d4ed8',
-                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
-                fontWeight: 800
+                color: '#1e40af',
+                border: '2px solid #ffffff',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f8fafc';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.25)';
               }}
             >
-              <ShoppingCart size={20} /> Open Checkout Register
+              <ShoppingCart size={20} color="#1e40af" /> Open Checkout Register
             </button>
           )}
           {canManageInventory && (

@@ -123,15 +123,34 @@ async function getProductByBarcode(req, res, next) {
     }
 
     const trimmed = barcode.trim();
+    const withoutLeadingZeros = trimmed.replace(/^0+/, '');
+    const withLeadingZero = trimmed.startsWith('0') ? trimmed : `0${trimmed}`;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+
     const orConditions = [
       { barcode: { equals: trimmed, mode: 'insensitive' } },
       { sku: { equals: trimmed, mode: 'insensitive' } },
       { barcodes: { some: { barcode: { equals: trimmed, mode: 'insensitive' } } } }
     ];
+
+    if (withoutLeadingZeros && withoutLeadingZeros !== trimmed) {
+      orConditions.push({ barcode: { equals: withoutLeadingZeros, mode: 'insensitive' } });
+      orConditions.push({ sku: { equals: withoutLeadingZeros, mode: 'insensitive' } });
+      orConditions.push({ barcodes: { some: { barcode: { equals: withoutLeadingZeros, mode: 'insensitive' } } } });
+    }
+
+    if (withLeadingZero !== trimmed) {
+      orConditions.push({ barcode: { equals: withLeadingZero, mode: 'insensitive' } });
+      orConditions.push({ sku: { equals: withLeadingZero, mode: 'insensitive' } });
+      orConditions.push({ barcodes: { some: { barcode: { equals: withLeadingZero, mode: 'insensitive' } } } });
+    }
+
     if (isUuid) {
       orConditions.push({ id: trimmed });
     }
+
+    // Name match fallback if typed in scanner input
+    orConditions.push({ name: { equals: trimmed, mode: 'insensitive' } });
 
     // Check primary product barcode, SKU, or secondary aliases
     const product = await prisma.product.findFirst({

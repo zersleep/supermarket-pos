@@ -96,6 +96,8 @@ export default function PosCheckout() {
   const [receiptOpen, setReceiptOpen] = useState(false);
 
   const barcodeRef = useRef(null);
+  const scanBufferRef = useRef('');
+  const lastKeyTimeRef = useRef(0);
 
   // Auto-dismiss error alert after 4 seconds
   useEffect(() => {
@@ -130,18 +132,14 @@ export default function PosCheckout() {
     loadPosData();
   }, [setExchangeRate]);
 
-  // Global Keyboard Shortcuts for Cashier
   // Global Keyboard Shortcuts & Hardware Barcode Scanner Listener
   useEffect(() => {
-    let scanBuffer = '';
-    let lastKeyTime = Date.now();
-
     const handleKeyDown = (e) => {
       const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
       const isBarcodeInput = e.target === barcodeRef.current;
       const currentTime = Date.now();
-      const timeDiff = currentTime - lastKeyTime;
-      lastKeyTime = currentTime;
+      const timeDiff = currentTime - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = currentTime;
 
       // Handle function shortcuts
       if (e.key === 'F1') {
@@ -189,58 +187,78 @@ export default function PosCheckout() {
 
       // Enter key detection (either in barcode field or from hardware scanner gun)
       if (e.key === 'Enter') {
+        const inputVal = (barcodeRef.current?.value || '').trim();
+        const bufferVal = scanBufferRef.current.trim();
+        scanBufferRef.current = '';
+
         if (isBarcodeInput) {
           e.preventDefault();
-          executeScan(barcodeInput);
-          scanBuffer = '';
+          const targetCode = inputVal || bufferVal || barcodeInput;
+          if (targetCode) executeScan(targetCode);
           return;
         }
 
-        // If hardware scanner buffer was filled rapidly (< 150ms) and completed with Enter
-        if (scanBuffer.length >= 3 && timeDiff < 150) {
+        // If hardware scanner buffer was filled outside the input and completed with Enter
+        if (bufferVal.length >= 2) {
           e.preventDefault();
-          executeScan(scanBuffer);
-          scanBuffer = '';
+          executeScan(bufferVal);
           return;
         }
-        scanBuffer = '';
         return;
       }
 
       // Hardware Scanner character buffering
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        if (timeDiff > 150) {
-          scanBuffer = ''; // Reset buffer if typed slowly by human
+        // Reset buffer if human paused typing for more than 250ms
+        if (timeDiff > 250) {
+          scanBufferRef.current = '';
         }
-        scanBuffer += e.key;
+        scanBufferRef.current += e.key;
 
-        // If focus was lost outside input, automatically redirect focus to barcode input
-        if (!isInput) {
-          barcodeRef.current?.focus();
+        // If user was typing outside an input, auto-focus barcode box on keypress
+        if (!isInput && e.target !== barcodeRef.current) {
+          if (timeDiff > 100) {
+            barcodeRef.current?.focus();
+          }
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, parkedOrders.length, products, barcodeInput]);
+  }, [cart.length, parkedOrders.length, products, barcodeInput]);
 
   // Robust Barcode Scanner Lookup (Hardware Scanner + Manual Entry + Demo Buttons)
   const executeScan = async (codeToScan) => {
-    const raw = codeToScan !== undefined ? codeToScan : barcodeInput;
+    const raw = codeToScan !== undefined ? codeToScan : (barcodeRef.current?.value || barcodeInput);
     const code = String(raw || '').replace(/[\r\n\t]/g, '').trim();
     if (!code) return;
 
     setError('');
     const cleanCode = code.toLowerCase();
+    const cleanNoZeros = cleanCode.replace(/^0+/, '');
+    const cleanWithZero = cleanCode.startsWith('0') ? cleanCode : `0${cleanCode}`;
 
     // 1. Check in-memory loaded products first (check barcode, sku, extra barcodes, or exact name)
     const localMatch = products.find((p) => {
       const pBarcode = (p.barcode || '').trim().toLowerCase();
       const pSku = (p.sku || '').trim().toLowerCase();
       const pName = (p.name || '').trim().toLowerCase();
-      const hasExtra = Array.isArray(p.barcodes) && p.barcodes.some((b) => (b.barcode || '').trim().toLowerCase() === cleanCode);
-      return pBarcode === cleanCode || pSku === cleanCode || pName === cleanCode || hasExtra;
+      const hasExtra = Array.isArray(p.barcodes) && p.barcodes.some((b) => {
+        const bCode = (b.barcode || '').trim().toLowerCase();
+        return bCode === cleanCode || bCode === cleanNoZeros || bCode === cleanWithZero;
+      });
+
+      return (
+        pBarcode === cleanCode ||
+        pBarcode === cleanNoZeros ||
+        pBarcode === cleanWithZero ||
+        pSku === cleanCode ||
+        pSku === cleanNoZeros ||
+        pSku === cleanWithZero ||
+        pName === cleanCode ||
+        hasExtra
+      );
     });
 
     if (localMatch) {
@@ -252,6 +270,7 @@ export default function PosCheckout() {
       playScannerBeep();
       addToCart(localMatch, 1);
       setBarcodeInput('');
+      if (barcodeRef.current) barcodeRef.current.value = '';
       setScanToast(`✓ Scanned: ${localMatch.name} ($${Number(localMatch.sellingPrice).toFixed(2)})`);
       setTimeout(() => setScanToast(''), 2500);
       barcodeRef.current?.focus();
@@ -270,6 +289,7 @@ export default function PosCheckout() {
           playScannerBeep();
           addToCart(prod, 1);
           setBarcodeInput('');
+          if (barcodeRef.current) barcodeRef.current.value = '';
           setScanToast(`✓ Scanned: ${prod.name} ($${Number(prod.sellingPrice).toFixed(2)})`);
           setTimeout(() => setScanToast(''), 2500);
         }
@@ -287,7 +307,10 @@ export default function PosCheckout() {
 
   const handleBarcodeSubmit = (e) => {
     e.preventDefault();
-    executeScan(barcodeInput);
+    const val = (barcodeRef.current?.value || barcodeInput || '').trim();
+    if (val) {
+      executeScan(val);
+    }
   };
 
   // Filter products by category and search term
@@ -772,20 +795,15 @@ export default function PosCheckout() {
 
           <Alert type="danger" message={error} onClose={() => setError('')} />
 
-          {/* Product Cards Grid with Fixed 4-Columns and Clear Pictures */}
+          {/* Product Cards Grid with Responsive Sizing and Clear Pictures */}
           <style>{`
             .pos-product-grid {
               display: grid;
-              grid-template-columns: repeat(4, minmax(0, 1fr));
-              gap: 12px;
+              grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+              gap: 14px;
               align-content: start;
             }
-            @media (max-width: 1400px) {
-              .pos-product-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-              }
-            }
-            @media (max-width: 950px) {
+            @media (max-width: 900px) {
               .pos-product-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
               }
@@ -796,7 +814,7 @@ export default function PosCheckout() {
             style={{
               flex: 1,
               overflowY: 'auto',
-              paddingRight: '4px'
+              paddingRight: '6px'
             }}
           >
             {loading ? (
@@ -827,47 +845,51 @@ export default function PosCheckout() {
                     }}
                     style={{
                       border: '1.5px solid #e2e8f0',
-                      borderRadius: '12px',
+                      borderRadius: '14px',
                       overflow: 'hidden',
                       backgroundColor: '#ffffff',
                       display: 'flex',
                       flexDirection: 'column',
                       cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                      opacity: isOutOfStock ? 0.55 : 1,
+                      opacity: isOutOfStock ? 0.6 : 1,
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.03)',
                       userSelect: 'none'
                     }}
                     onMouseEnter={(e) => {
                       if (!isOutOfStock) {
                         e.currentTarget.style.borderColor = '#2563eb';
                         e.currentTarget.style.transform = 'translateY(-3px)';
-                        e.currentTarget.style.boxShadow = '0 10px 20px -5px rgba(37, 99, 235, 0.15)';
+                        e.currentTarget.style.boxShadow = '0 10px 22px -4px rgba(37, 99, 235, 0.16)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
+                      e.currentTarget.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.03)';
                     }}
                   >
-                    {/* Full Product Picture Container (100% Uncropped) */}
+                    {/* Clean Full-Size Product Picture (100% Uncropped, No Overlapping Badges) */}
                     <div
                       style={{
-                        height: '145px',
+                        height: '175px',
                         width: '100%',
-                        position: 'relative',
                         backgroundColor: '#ffffff',
                         borderBottom: '1px solid #f1f5f9',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '10px 12px'
+                        padding: '14px',
+                        overflow: 'hidden'
                       }}
                     >
                       <img
                         src={imgUrl}
                         alt={p.name}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80';
+                        }}
                         style={{
                           maxWidth: '100%',
                           maxHeight: '100%',
@@ -880,57 +902,18 @@ export default function PosCheckout() {
                         }}
                         loading="lazy"
                         onMouseEnter={(e) => {
-                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.06)';
+                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.05)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'scale(1)';
                         }}
                       />
-
-                      {/* Floating Top SKU Badge */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '6px',
-                          left: '6px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.94)',
-                          backdropFilter: 'blur(4px)',
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          fontSize: '0.65rem',
-                          fontWeight: 700,
-                          color: '#334155',
-                          border: '1px solid rgba(0, 0, 0, 0.08)',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                        }}
-                        className="mono"
-                      >
-                        {p.sku}
-                      </div>
-
-                      {/* Floating Stock Status Badge */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '6px',
-                          right: '6px'
-                        }}
-                      >
-                        <span
-                          className={`badge ${
-                            isOutOfStock ? 'badge-danger' : p.isLowStock ? 'badge-warning' : 'badge-success'
-                          }`}
-                          style={{ fontSize: '0.625rem', padding: '2px 6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
-                        >
-                          {isOutOfStock ? 'Out of Stock' : `${p.currentStock} in stock`}
-                        </span>
-                      </div>
                     </div>
 
-                    {/* Fixed Details Area */}
+                    {/* Product Details Section */}
                     <div
                       style={{
-                        padding: '10px 11px',
+                        padding: '12px 14px 14px 14px',
                         display: 'flex',
                         flexDirection: 'column',
                         flex: 1,
@@ -939,68 +922,71 @@ export default function PosCheckout() {
                       }}
                     >
                       <div>
+                        {/* Meta Category & Stock Row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.category?.name || p.sku}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              color: isOutOfStock ? '#dc2626' : p.isLowStock ? '#d97706' : '#16a34a',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isOutOfStock ? '#dc2626' : p.isLowStock ? '#f59e0b' : '#16a34a',
+                                display: 'inline-block'
+                              }}
+                            />
+                            {isOutOfStock ? 'Out of stock' : `${p.currentStock} in stock`}
+                          </span>
+                        </div>
+
+                        {/* Product Title */}
                         <div
                           style={{
                             fontWeight: 700,
-                            fontSize: '0.85rem',
+                            fontSize: '0.925rem',
                             color: '#0f172a',
                             lineHeight: 1.35,
-                            height: '36px',
+                            height: '38px',
                             overflow: 'hidden',
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical'
+                            WebkitBoxOrient: 'vertical',
+                            marginTop: '6px'
                           }}
                           title={p.name}
                         >
                           {p.name}
                         </div>
-
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            marginTop: '2px'
-                          }}
-                        >
-                          {p.barcode ? (
-                            <span
-                              className="mono"
-                              style={{
-                                fontSize: '0.65rem',
-                                color: '#64748b',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px'
-                              }}
-                            >
-                              <Barcode size={11} /> {p.barcode}
-                            </span>
-                          ) : p.category?.name ? (
-                            <span style={{ fontSize: '0.65rem', color: '#64748b', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>
-                              {p.category.name}
-                            </span>
-                          ) : null}
-                        </div>
                       </div>
 
-                      {/* Fixed Price & Add Section */}
+                      {/* Prominent Price & Add Button Row */}
                       <div
                         style={{
-                          marginTop: '6px',
-                          paddingTop: '6px',
+                          marginTop: '8px',
+                          paddingTop: '8px',
                           borderTop: '1px solid #f1f5f9',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'flex-end'
+                          alignItems: 'center'
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1d4ed8', letterSpacing: '-0.02em', lineHeight: 1.1 }} className="mono">
+                          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e40af', letterSpacing: '-0.02em', lineHeight: 1 }} className="currency-amount">
                             ${Number(p.sellingPrice).toFixed(2)}
                           </div>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginTop: '2px' }} className="mono">
+                          <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748b', marginTop: '3px' }} className="currency-amount">
                             {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
                           </div>
                         </div>
@@ -1009,14 +995,15 @@ export default function PosCheckout() {
                           type="button"
                           className="btn btn-sm"
                           style={{
-                            padding: '4px 10px',
-                            fontSize: '0.75rem',
+                            padding: '6px 14px',
+                            fontSize: '0.78rem',
                             fontWeight: 700,
-                            color: isOutOfStock ? '#94a3b8' : '#2563eb',
+                            color: isOutOfStock ? '#94a3b8' : '#1d4ed8',
                             borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
                             backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
                             borderRadius: '8px',
-                            border: '1px solid'
+                            border: '1px solid',
+                            cursor: isOutOfStock ? 'not-allowed' : 'pointer'
                           }}
                           disabled={isOutOfStock}
                         >
@@ -1266,13 +1253,13 @@ export default function PosCheckout() {
           <div style={{ padding: '10px 0 8px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b' }}>
               <span>Subtotal:</span>
-              <span className="mono">${subtotal.toFixed(2)}</span>
+              <span className="currency-amount" style={{ fontWeight: 700 }}>${subtotal.toFixed(2)}</span>
             </div>
 
             {discountTotal > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#dc2626' }}>
                 <span>Total Discount:</span>
-                <span className="mono">-${discountTotal.toFixed(2)}</span>
+                <span className="currency-amount" style={{ fontWeight: 700 }}>-${discountTotal.toFixed(2)}</span>
               </div>
             )}
 
@@ -1288,11 +1275,11 @@ export default function PosCheckout() {
             >
               <div>
                 <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#0f172a' }}>Grand Total:</div>
-                <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 700 }}>
+                <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 700 }} className="currency-amount">
                   {grandTotalKHR.toLocaleString()} ៛ KHR
                 </div>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }} className="mono">
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1e40af' }} className="currency-amount">
                 ${grandTotal.toFixed(2)}
               </div>
             </div>

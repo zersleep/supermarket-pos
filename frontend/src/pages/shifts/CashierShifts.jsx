@@ -299,70 +299,225 @@ export default function CashierShifts() {
           className="card"
           style={{
             marginBottom: '26px',
-            borderLeft: '5px solid #10b981',
+            backgroundColor: '#ffffff',
+            border: '1.5px solid #bfdbfe',
+            borderRadius: '16px',
             padding: '24px',
-            boxShadow: 'var(--shadow-md)'
+            boxShadow: '0 8px 25px -4px rgba(37, 99, 235, 0.08)'
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+          {/* Top Status & Cashier Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="badge badge-success" style={{ padding: '3px 10px', fontSize: '0.75rem' }}>
-                  ● ACTIVE SHIFT OPEN
-                </span>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Register Terminal #01
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '4px 14px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  <span style={{ position: 'relative', display: 'flex', height: '8px', width: '8px' }}>
+                    <span style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '50%', backgroundColor: '#22c55e', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                    <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', height: '8px', width: '8px', backgroundColor: '#16a34a' }} />
+                  </span>
+                  ACTIVE REGISTER SHIFT #01
+                </div>
+
+                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                  POS Terminal #01
                 </span>
               </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>
-                Cashier: {user.fullName || user.username}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
-                Opened on {new Date(activeShift.openedAt).toLocaleDateString()} at {new Date(activeShift.openedAt).toLocaleTimeString()}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    backgroundColor: '#eff6ff',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #bfdbfe',
+                    fontWeight: 800,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  {(user.fullName || user.username || 'C').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                    Cashier: {user.fullName || user.username}
+                  </div>
+                  <div style={{ fontSize: '0.775rem', color: '#64748b', marginTop: '3px' }}>
+                    Shift started on {new Date(activeShift.openedAt).toLocaleDateString()} at {new Date(activeShift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style={{ textAlign: 'right' }}>
+            {/* Quick Shift Actions */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => openZReport(activeShift)}
                 className="btn btn-outline btn-sm"
-                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                style={{ padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700, borderColor: '#bfdbfe', color: '#1d4ed8' }}
               >
-                <FileText size={15} /> Current Shift X-Report
+                <FileText size={15} /> X-Report Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => setMovementModalVisible(true)}
+                className="btn btn-outline btn-sm"
+                style={{ padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700 }}
+              >
+                <DollarSign size={15} /> Cash In / Out
+              </button>
+              <button
+                type="button"
+                onClick={() => setCloseModalVisible(true)}
+                className="btn btn-danger btn-sm"
+                style={{ padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700 }}
+              >
+                <Lock size={15} /> Close & Balance Drawer
               </button>
             </div>
           </div>
 
-          <div className="grid-4">
-            <StatCard
-              title="Opening Cash Float"
-              value={`$${Number(activeShift.openingCash).toFixed(2)}`}
-              subtitle={`≈ ${(Number(activeShift.openingCash) * khrExchangeRate).toLocaleString()} ៛ KHR`}
-              icon={DollarSign}
-              color="#3b82f6"
-            />
-            <StatCard
-              title="Cash Sales Collected"
-              value={`$${Number(activeShift.cashSalesTotal).toFixed(2)}`}
-              subtitle={`${activeShift._count?.sales || 0} sales processed`}
-              icon={ArrowDownRight}
-              color="#10b981"
-            />
-            <StatCard
-              title="Cash In / Out Drops"
-              value={`+$${Number(activeShift.cashInTotal).toFixed(2)} / -$${Number(activeShift.cashOutTotal).toFixed(2)}`}
-              subtitle="Audited register movements"
-              icon={ArrowUpRight}
-              color="#f59e0b"
-            />
-            <StatCard
-              title="Expected In Drawer"
-              value={`$${Number(activeShift.expectedClosingCash).toFixed(2)}`}
-              subtitle={`≈ ${(Number(activeShift.expectedClosingCash) * khrExchangeRate).toLocaleString()} ៛ KHR`}
-              icon={CheckCircle2}
-              color="#0f172a"
-            />
+          {/* 4 Sleek Drawer Metrics Tiles */}
+          <div className="grid-4" style={{ gap: '14px' }}>
+            {/* 1. Opening Cash Float */}
+            <div
+              style={{
+                backgroundColor: '#f8faff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Opening Cash Float
+                </span>
+                <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1d4ed8' }}>
+                  <DollarSign size={16} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
+                  ${Number(activeShift.openingCash).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748b', marginTop: '4px' }} className="currency-amount">
+                  ≈ {(Number(activeShift.openingCash) * khrExchangeRate).toLocaleString()} ៛ KHR
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Cash Sales Collected */}
+            <div
+              style={{
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Cash Sales Collected
+                </span>
+                <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a' }}>
+                  <ArrowDownRight size={16} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#15803d', lineHeight: 1 }} className="currency-amount">
+                  ${Number(activeShift.cashSalesTotal).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#15803d', marginTop: '4px' }}>
+                  {activeShift._count?.sales || 0} sales processed
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Cash In / Out Drops */}
+            <div
+              style={{
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Drawer In / Out Drops
+                </span>
+                <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                  <ArrowUpRight size={16} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#b45309', lineHeight: 1 }} className="currency-amount">
+                  +${Number(activeShift.cashInTotal).toFixed(2)} / -${Number(activeShift.cashOutTotal).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#92400e', marginTop: '4px' }}>
+                  Audited register drops
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Expected In Drawer - Hero Card */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+                border: '1px solid #60a5fa',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                color: '#ffffff',
+                boxShadow: '0 6px 16px -2px rgba(37, 99, 235, 0.35)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#bfdbfe', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Expected In Drawer
+                </span>
+                <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+                  <CheckCircle2 size={16} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#ffffff', lineHeight: 1, letterSpacing: '-0.02em' }} className="currency-amount">
+                  ${Number(activeShift.expectedClosingCash).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.775rem', fontWeight: 700, color: '#dbeafe', marginTop: '4px' }} className="currency-amount">
+                  ≈ {(Number(activeShift.expectedClosingCash) * khrExchangeRate).toLocaleString()} ៛ KHR
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
