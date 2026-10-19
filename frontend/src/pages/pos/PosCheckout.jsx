@@ -21,7 +21,8 @@ import {
   PlayCircle,
   Tag,
   Keyboard,
-  Receipt
+  Receipt,
+  Camera
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
@@ -98,6 +99,69 @@ export default function PosCheckout() {
   const barcodeRef = useRef(null);
   const scanBufferRef = useRef('');
   const lastKeyTimeRef = useRef(0);
+
+  // Live Camera Barcode Scanner Modal State
+  const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
+  const videoRef = useRef(null);
+  const [cameraStream, setCameraStream] = useState(null);
+
+  // Camera Barcode Detection Stream Lifecycle
+  useEffect(() => {
+    let stream = null;
+    let detector = null;
+    let scanInterval = null;
+
+    if (cameraScannerOpen) {
+      if ('BarcodeDetector' in window) {
+        try {
+          detector = new window.BarcodeDetector({
+            formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39']
+          });
+        } catch (e) {}
+      }
+
+      navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'environment' } })
+        .then((s) => {
+          stream = s;
+          setCameraStream(s);
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+            videoRef.current.play().catch(() => {});
+          }
+
+          if (detector) {
+            scanInterval = setInterval(async () => {
+              if (videoRef.current && videoRef.current.readyState >= 2) {
+                try {
+                  const barcodes = await detector.detect(videoRef.current);
+                  if (barcodes.length > 0) {
+                    const code = barcodes[0].rawValue;
+                    if (code) {
+                      executeScan(code);
+                      setCameraScannerOpen(false);
+                    }
+                  }
+                } catch (e) {}
+              }
+            }, 300);
+          }
+        })
+        .catch(() => {
+          // Camera not available or permission denied - fallback stays active
+        });
+    } else {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+        setCameraStream(null);
+      }
+      if (scanInterval) clearInterval(scanInterval);
+    }
+
+    return () => {
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      if (scanInterval) clearInterval(scanInterval);
+    };
+  }, [cameraScannerOpen]);
 
   // Auto-dismiss error alert after 4 seconds
   useEffect(() => {
@@ -310,6 +374,8 @@ export default function PosCheckout() {
     const val = (barcodeRef.current?.value || barcodeInput || '').trim();
     if (val) {
       executeScan(val);
+    } else {
+      setCameraScannerOpen(true);
     }
   };
 
@@ -653,7 +719,7 @@ export default function PosCheckout() {
                 className="form-input"
                 style={{
                   paddingLeft: '44px',
-                  paddingRight: '185px',
+                  paddingRight: '250px',
                   fontWeight: 500,
                   backgroundColor: '#ffffff',
                   borderColor: scanToast ? '#10b981' : '#cbd5e1'
@@ -667,16 +733,26 @@ export default function PosCheckout() {
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
+                  onClick={() => setCameraScannerOpen(true)}
+                  title="Open Camera / Real Barcode Scanner"
+                  style={{ fontSize: '0.725rem', padding: '5px 8px', color: '#1e40af', borderColor: '#bfdbfe' }}
+                >
+                  <Camera size={13} /> Camera
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
                   onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
                   title="Toggle 1-Click Demo Barcode Scanner [F2]"
                   style={{ fontSize: '0.725rem', padding: '5px 8px', color: '#2563eb', borderColor: '#bfdbfe' }}
                 >
-                  <Zap size={13} /> {showDemoBarcodes ? 'Hide' : 'Quick Barcodes'}
+                  <Zap size={13} /> {showDemoBarcodes ? 'Hide' : 'Barcodes'}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary btn-sm"
                   style={{ fontSize: '0.75rem', padding: '5px 12px' }}
+                  title="Scan barcode or open scanner"
                 >
                   Scan
                 </button>
@@ -845,7 +921,7 @@ export default function PosCheckout() {
                     }}
                     style={{
                       border: '1.5px solid #e2e8f0',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       overflow: 'hidden',
                       backgroundColor: '#ffffff',
                       display: 'flex',
@@ -853,33 +929,35 @@ export default function PosCheckout() {
                       cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                       opacity: isOutOfStock ? 0.6 : 1,
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.03)',
-                      userSelect: 'none'
+                      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+                      userSelect: 'none',
+                      padding: '12px'
                     }}
                     onMouseEnter={(e) => {
                       if (!isOutOfStock) {
                         e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.transform = 'translateY(-3px)';
-                        e.currentTarget.style.boxShadow = '0 10px 22px -4px rgba(37, 99, 235, 0.16)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 18px rgba(37, 99, 235, 0.14)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.03)';
+                      e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.04)';
                     }}
                   >
-                    {/* Clean Full-Size Product Picture (100% Uncropped, No Overlapping Badges) */}
+                    {/* Picture Display inside Product Card Box */}
                     <div
                       style={{
-                        height: '175px',
+                        height: '145px',
                         width: '100%',
-                        backgroundColor: '#ffffff',
-                        borderBottom: '1px solid #f1f5f9',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #f1f5f9',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '14px',
+                        padding: '10px',
                         overflow: 'hidden'
                       }}
                     >
@@ -910,106 +988,123 @@ export default function PosCheckout() {
                       />
                     </div>
 
-                    {/* Product Details Section */}
+                    {/* Product Name */}
                     <div
                       style={{
-                        padding: '12px 14px 14px 14px',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        color: '#0f172a',
+                        lineHeight: 1.35,
+                        height: '38px',
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        marginTop: '10px',
+                        marginBottom: '4px'
+                      }}
+                      title={p.name}
+                    >
+                      {p.name}
+                    </div>
+
+                    {/* Product ID & Barcode */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                      <span
+                        style={{
+                          fontSize: '0.675rem',
+                          fontWeight: 700,
+                          backgroundColor: '#eff6ff',
+                          color: '#1d4ed8',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          border: '1px solid #bfdbfe'
+                        }}
+                        className="mono"
+                      >
+                        ID: {p.sku}
+                      </span>
+                      {p.barcode && (
+                        <span
+                          style={{
+                            fontSize: '0.675rem',
+                            color: '#64748b',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          className="mono"
+                        >
+                          <Barcode size={10} /> {p.barcode}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Category & Stock Row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', marginBottom: '8px' }}>
+                      <span style={{ color: '#64748b', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>
+                        {p.category?.name || 'General'}
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          color: isOutOfStock ? '#dc2626' : p.isLowStock ? '#d97706' : '#16a34a',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '5px',
+                            height: '5px',
+                            borderRadius: '50%',
+                            backgroundColor: isOutOfStock ? '#dc2626' : p.isLowStock ? '#f59e0b' : '#16a34a',
+                            display: 'inline-block'
+                          }}
+                        />
+                        {isOutOfStock ? 'Out of stock' : `${p.currentStock} in stock`}
+                      </span>
+                    </div>
+
+                    {/* Price & Add Button Row */}
+                    <div
+                      style={{
+                        marginTop: 'auto',
+                        paddingTop: '8px',
+                        borderTop: '1px solid #f1f5f9',
                         display: 'flex',
-                        flexDirection: 'column',
-                        flex: 1,
                         justifyContent: 'space-between',
-                        gap: '6px'
+                        alignItems: 'center'
                       }}
                     >
                       <div>
-                        {/* Meta Category & Stock Row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {p.category?.name || p.sku}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              color: isOutOfStock ? '#dc2626' : p.isLowStock ? '#d97706' : '#16a34a',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            <span
-                              style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                backgroundColor: isOutOfStock ? '#dc2626' : p.isLowStock ? '#f59e0b' : '#16a34a',
-                                display: 'inline-block'
-                              }}
-                            />
-                            {isOutOfStock ? 'Out of stock' : `${p.currentStock} in stock`}
-                          </span>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
+                          ${Number(p.sellingPrice).toFixed(2)}
                         </div>
-
-                        {/* Product Title */}
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            fontSize: '0.925rem',
-                            color: '#0f172a',
-                            lineHeight: 1.35,
-                            height: '38px',
-                            overflow: 'hidden',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            marginTop: '6px'
-                          }}
-                          title={p.name}
-                        >
-                          {p.name}
+                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', marginTop: '2px' }} className="currency-amount">
+                          {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
                         </div>
                       </div>
 
-                      {/* Prominent Price & Add Button Row */}
-                      <div
+                      <button
+                        type="button"
+                        className="btn btn-sm"
                         style={{
-                          marginTop: '8px',
-                          paddingTop: '8px',
-                          borderTop: '1px solid #f1f5f9',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
+                          padding: '5px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: isOutOfStock ? '#94a3b8' : '#1d4ed8',
+                          borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
+                          backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
+                          borderRadius: '6px',
+                          border: '1px solid',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer'
                         }}
+                        disabled={isOutOfStock}
                       >
-                        <div>
-                          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e40af', letterSpacing: '-0.02em', lineHeight: 1 }} className="currency-amount">
-                            ${Number(p.sellingPrice).toFixed(2)}
-                          </div>
-                          <div style={{ fontSize: '0.725rem', fontWeight: 600, color: '#64748b', marginTop: '3px' }} className="currency-amount">
-                            {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          style={{
-                            padding: '6px 14px',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: isOutOfStock ? '#94a3b8' : '#1d4ed8',
-                            borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
-                            backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
-                            borderRadius: '8px',
-                            border: '1px solid',
-                            cursor: isOutOfStock ? 'not-allowed' : 'pointer'
-                          }}
-                          disabled={isOutOfStock}
-                        >
-                          + Add
-                        </button>
-                      </div>
+                        + Add
+                      </button>
                     </div>
                   </div>
                 );
@@ -1880,6 +1975,137 @@ export default function PosCheckout() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Live Barcode Scanner Terminal Modal */}
+      <Modal
+        isOpen={cameraScannerOpen}
+        onClose={() => setCameraScannerOpen(false)}
+        title="Live Barcode Scanner Terminal"
+        size="md"
+      >
+        <div style={{ textAlign: 'center' }}>
+          {/* Animated Viewfinder */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '240px',
+              backgroundColor: '#0f172a',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)'
+            }}
+          >
+            {/* Live Camera Video stream */}
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+
+            {/* Target Crosshair / Reticle Overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '200px',
+                height: '110px',
+                border: '2px dashed rgba(59, 130, 246, 0.8)',
+                borderRadius: '8px',
+                pointerEvents: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.45)'
+              }}
+            >
+              {/* Laser scanning line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  width: '90%',
+                  height: '2px',
+                  backgroundColor: '#ef4444',
+                  boxShadow: '0 0 8px #ef4444, 0 0 16px #ef4444',
+                  animation: 'scannerLaser 1.8s infinite ease-in-out'
+                }}
+              />
+            </div>
+
+            <style>{`
+              @keyframes scannerLaser {
+                0% { top: 10%; opacity: 0.8; }
+                50% { top: 85%; opacity: 1; }
+                100% { top: 10%; opacity: 0.8; }
+              }
+            `}</style>
+          </div>
+
+          <div style={{ marginTop: '14px', fontSize: '0.85rem', color: '#475569' }}>
+            Point your camera or barcode reader gun at any supermarket barcode.
+          </div>
+
+          {/* Quick Real Barcodes for Testing */}
+          <div style={{ marginTop: '16px', textAlign: 'left' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+              Or click any real product to simulate an instant scan:
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+              {products.slice(0, 8).map((p) => {
+                const code = p.barcode || p.sku;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      executeScan(code);
+                      setCameraScannerOpen(false);
+                    }}
+                    style={{
+                      padding: '8px 10px',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px'
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.name}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#2563eb', fontFamily: 'monospace' }}>
+                      ⚡ {code}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setCameraScannerOpen(false)}
+            >
+              Close Scanner
+            </button>
           </div>
         </div>
       </Modal>

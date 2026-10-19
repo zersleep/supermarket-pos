@@ -16,6 +16,9 @@ async function getCurrentShift(req, res, next) {
       },
       include: {
         cashMovements: {
+          include: {
+            user: { select: { id: true, fullName: true, username: true } }
+          },
           orderBy: { createdAt: 'desc' }
         },
         _count: {
@@ -234,6 +237,12 @@ async function getShiftHistory(req, res, next) {
         orderBy: { openedAt: 'desc' },
         include: {
           cashier: { select: { id: true, fullName: true, username: true } },
+          cashMovements: {
+            include: {
+              user: { select: { id: true, fullName: true, username: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+          },
           _count: { select: { sales: true, cashMovements: true } }
         }
       })

@@ -156,32 +156,38 @@ export default function Dashboard() {
           {canOperatePos && (
             <button
               onClick={() => navigate('/pos')}
-              className="btn btn-lg"
+              className="btn btn-outline btn-lg"
               style={{
-                backgroundColor: '#ffffff',
-                color: '#1e40af',
-                border: '2px solid #ffffff',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
-                fontWeight: 800,
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                color: '#ffffff',
+                border: '1.5px solid rgba(255, 255, 255, 0.5)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+                fontWeight: 700,
                 fontSize: '0.95rem',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
                 cursor: 'pointer',
+                borderRadius: '8px',
+                padding: '10px 20px',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f8fafc';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.38)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.85)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.35)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.25)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.25)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.15)';
               }}
             >
-              <ShoppingCart size={20} color="#1e40af" /> Open Checkout Register
+              <ShoppingCart size={19} color="#ffffff" /> Open Checkout Register
             </button>
           )}
           {canManageInventory && (
@@ -191,9 +197,23 @@ export default function Dashboard() {
                 className="btn btn-outline"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   color: '#ffffff',
                   borderColor: 'rgba(255, 255, 255, 0.35)',
-                  fontWeight: 700
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.28)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.35)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 <Boxes size={18} /> Manage Inventory
@@ -203,9 +223,23 @@ export default function Dashboard() {
                 className="btn btn-outline"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   color: '#ffffff',
                   borderColor: 'rgba(255, 255, 255, 0.35)',
-                  fontWeight: 700
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.28)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.35)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 <Package size={18} /> Products

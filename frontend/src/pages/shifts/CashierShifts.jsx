@@ -17,7 +17,8 @@ import {
   RotateCcw,
   ShieldCheck,
   ArrowRight,
-  ShoppingCart
+  ShoppingCart,
+  Plus
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -228,19 +229,10 @@ export default function CashierShifts() {
             <RefreshCw size={14} /> Refresh
           </button>
 
-          {!activeShift ? (
+          {!activeShift && (
             <button onClick={() => setOpenModalVisible(true)} className="btn btn-primary">
               <Clock size={16} /> Open New Shift
             </button>
-          ) : (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setMovementModalVisible(true)} className="btn btn-outline">
-                <DollarSign size={16} /> Cash In / Cash Out
-              </button>
-              <button onClick={() => setCloseModalVisible(true)} className="btn btn-danger">
-                <Lock size={16} /> Close Shift & Reconcile
-              </button>
-            </div>
           )}
         </div>
       </div>
@@ -518,6 +510,100 @@ export default function CashierShifts() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Audited Drawer Cash Movements Log */}
+          <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0f172a' }}>
+                  Audited Drawer Cash Movements ({activeShift.cashMovements?.length || 0})
+                </span>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                  Float additions, mid-day safe drops, and petty cash logs for Register Terminal #01
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMovementModalVisible(true)}
+                className="btn btn-outline btn-sm"
+                style={{ fontSize: '0.75rem', padding: '5px 12px', color: '#1d4ed8', borderColor: '#bfdbfe', fontWeight: 700 }}
+              >
+                <Plus size={13} /> Record Cash In / Out
+              </button>
+            </div>
+
+            {(!activeShift.cashMovements || activeShift.cashMovements.length === 0) ? (
+              <div
+                style={{
+                  padding: '16px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: '10px',
+                  fontSize: '0.8rem',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <Clock size={16} color="#94a3b8" />
+                <span>No cash movements recorded yet in this shift. Cash drawer is currently balancing directly from starting float (${Number(activeShift.openingCash).toFixed(2)}) and checkout sales.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {activeShift.cashMovements.map((m) => {
+                  const isIn = m.type === 'CASH_IN';
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        padding: '11px 16px',
+                        backgroundColor: isIn ? '#f0fdf4' : '#fffbeb',
+                        border: `1px solid ${isIn ? '#bbf7d0' : '#fde68a'}`,
+                        borderRadius: '10px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span
+                          className={`badge ${isIn ? 'badge-success' : 'badge-warning'}`}
+                          style={{ fontSize: '0.7rem', padding: '3px 8px', fontWeight: 800 }}
+                        >
+                          {isIn ? '+ CASH IN (Add Float)' : '- CASH OUT (Safe Drop)'}
+                        </span>
+                        <div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                            {m.reason}
+                          </div>
+                          <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
+                            Recorded at {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {m.user?.fullName || m.user?.username || 'Cashier'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div
+                          className="currency-amount"
+                          style={{
+                            fontSize: '1.05rem',
+                            fontWeight: 800,
+                            color: isIn ? '#15803d' : '#b45309'
+                          }}
+                        >
+                          {isIn ? '+' : '-'}${Number(m.amount).toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b' }} className="currency-amount">
+                          {Math.round(Number(m.amount) * khrExchangeRate).toLocaleString()} ៛ KHR
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -802,17 +888,52 @@ export default function CashierShifts() {
                 type="button"
                 className={`btn ${movementType === 'CASH_IN' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setMovementType('CASH_IN')}
+                style={{ padding: '10px', fontSize: '0.85rem', fontWeight: 700 }}
               >
-                <ArrowDownRight size={16} /> Cash In (Add to Drawer)
+                <ArrowDownRight size={16} /> Cash In (Add Money)
               </button>
               <button
                 type="button"
                 className={`btn ${movementType === 'CASH_OUT' ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setMovementType('CASH_OUT')}
+                style={{ padding: '10px', fontSize: '0.85rem', fontWeight: 700 }}
               >
-                <ArrowUpRight size={16} /> Cash Out (Drop / Payout)
+                <ArrowUpRight size={16} /> Cash Out (Take Out)
               </button>
             </div>
+
+            {/* Clear Explanation of Cash In vs Cash Out */}
+            {movementType === 'CASH_IN' ? (
+              <div
+                style={{
+                  marginTop: '10px',
+                  padding: '10px 14px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  color: '#166534',
+                  lineHeight: 1.4
+                }}
+              >
+                <strong>📥 Cash In (Adding Money to Drawer):</strong> Use this when you add more small bills for change or top up your starting drawer float. The expected drawer total will <strong>increase</strong>.
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginTop: '10px',
+                  padding: '10px 14px',
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  color: '#92400e',
+                  lineHeight: 1.4
+                }}
+              >
+                <strong>📤 Cash Out (Removing Money from Drawer):</strong> Use this when you drop excess large bills into the store safe (safe drop), pay for store supplies, or give a payout. The expected drawer total will <strong>decrease</strong>.
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -827,8 +948,33 @@ export default function CashierShifts() {
               style={{ fontSize: '1.25rem', fontWeight: 800 }}
               value={movementAmount}
               onChange={(e) => setMovementAmount(e.target.value)}
-              autoFocus
-            />
+              />
+            {activeShift && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  padding: '10px 14px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.725rem', color: '#64748b' }}>Current Drawer Expected:</div>
+                  <div style={{ fontWeight: 700, color: '#0f172a' }}>${Number(activeShift.expectedClosingCash).toFixed(2)}</div>
+                </div>
+                <div style={{ fontSize: '1rem', color: '#94a3b8' }}>➔</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.725rem', color: '#64748b' }}>New Drawer Expected Total:</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: movementType === 'CASH_IN' ? '#16a34a' : '#d97706' }}>
+                    ${Math.max(0, Number(activeShift.expectedClosingCash) + (movementType === 'CASH_IN' ? (Number(movementAmount) || 0) : -(Number(movementAmount) || 0))).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-group">
