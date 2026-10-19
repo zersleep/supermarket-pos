@@ -33,6 +33,13 @@ export default function PendingPayments() {
     fetchPendingPayments();
   }, []);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   const handleConfirm = async () => {
     if (!selectedPayment) return;
     setActionLoading(true);

@@ -658,6 +658,7 @@ export default function ProductList() {
                 <label className="form-label" style={{ fontWeight: 600 }}>Low Stock Alert Level</label>
                 <input
                   type="number"
+                  step="1"
                   min="0"
                   className="form-input mono"
                   placeholder="10"
@@ -890,6 +891,7 @@ export default function ProductList() {
                   <label className="form-label" style={{ fontWeight: 600 }}>Initial Stock Quantity</label>
                   <input
                     type="number"
+                    step="1"
                     min="0"
                     className="form-input mono"
                     placeholder="0"

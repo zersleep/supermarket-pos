@@ -59,6 +59,13 @@ export default function PurchaseOrders() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   const handleAddItemRow = () => {
     if (products.length > 0) {
       setPoItems([

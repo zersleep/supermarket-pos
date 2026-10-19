@@ -43,6 +43,13 @@ export default function StoreSettings() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };

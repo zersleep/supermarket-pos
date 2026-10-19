@@ -291,11 +291,6 @@ export default function InventorySummary() {
           <button onClick={loadData} className="btn btn-outline btn-sm">
             <RefreshCw size={14} /> Refresh
           </button>
-          {canManageInventory && (
-            <button onClick={() => openAdjustmentModal()} className="btn btn-primary">
-              <PlusCircle size={16} /> Stock Adjustment
-            </button>
-          )}
         </div>
       </div>
 
@@ -882,8 +877,8 @@ export default function InventorySummary() {
               </label>
               <input
                 type="number"
-                step="any"
-                min="0.01"
+                step="1"
+                min="1"
                 required
                 className="form-input mono"
                 placeholder="e.g. 10"
@@ -891,6 +886,21 @@ export default function InventorySummary() {
                 onChange={(e) => setAdjData({ ...adjData, quantity: e.target.value })}
                 style={{ fontSize: '1.1rem', fontWeight: 700, padding: '10px 14px' }}
               />
+              {/* Quick Stepper Chips */}
+              <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Quick Quantity:</span>
+                {[1, 5, 10, 20, 50, 100].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '3px 8px' }}
+                    onClick={() => setAdjData({ ...adjData, quantity: num })}
+                  >
+                    {adjData.type === 'ADJUSTMENT_ADD' ? `+${num}` : `-${num}`}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Real-time Calculation Box */}
@@ -988,7 +998,7 @@ export default function InventorySummary() {
         isOpen={writeOffModalOpen}
         onClose={() => setWriteOffModalOpen(false)}
         title="Authorized Batch Write-Off"
-        maxWidth="660px"
+        maxWidth="720px"
       >
         <form onSubmit={handleWriteOffSubmit}>
           {/* Explanation Alert */}
@@ -1007,7 +1017,7 @@ export default function InventorySummary() {
           >
             <Trash2 size={22} color="#dc2626" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: '0.85rem', lineHeight: 1.4 }}>
-              <strong>Permanent Write-Off:</strong> Removes spoiled, expired, or damaged products from inventory. This action permanently logs an audited inventory loss.
+              <strong>Permanent Write-Off:</strong> Removes spoiled, expired, or damaged items from active inventory and records an audited inventory loss in financial records.
             </div>
           </div>
 
@@ -1037,15 +1047,23 @@ export default function InventorySummary() {
                 }}
               />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
-                  {selectedBatch.product?.name}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                      {selectedBatch.product?.name}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
+                      Batch: <strong className="mono" style={{ color: '#1e40af' }}>{selectedBatch.batchNumber}</strong> • SKU: <span className="mono">{selectedBatch.product?.sku}</span>
+                    </div>
+                  </div>
+                  <div>
+                    {getExpiryBadge(selectedBatch.expiryDate)}
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
-                  Batch # <strong className="mono" style={{ color: '#1e40af' }}>{selectedBatch.batchNumber}</strong> • SKU: <span className="mono">{selectedBatch.product?.sku}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '6px', fontSize: '0.8rem' }}>
+
+                <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '0.8rem', flexWrap: 'wrap' }}>
                   <span>
-                    Available: <strong>{Number(selectedBatch.currentQuantity)} {selectedBatch.product?.unit}s</strong>
+                    Batch Current Stock: <strong>{Number(selectedBatch.currentQuantity)} {selectedBatch.product?.unit}s</strong>
                   </span>
                   <span>
                     Unit Cost: <strong>${Number(selectedBatch.costPrice).toFixed(2)}</strong>
@@ -1058,26 +1076,71 @@ export default function InventorySummary() {
             </div>
           )}
 
-          {/* Write-off Type & Mode */}
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600 }}>Write-Off Type *</label>
-              <select
-                className="form-select"
-                value={writeOffType}
-                onChange={(e) => setWriteOffType(e.target.value)}
+          {/* Step 1: Write-off Reason / Type Selection Cards */}
+          <div style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+              1. Write-Off Reason Category *
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div
+                onClick={() => setWriteOffType('WRITE_OFF_EXPIRED')}
+                style={{
+                  border: `2px solid ${writeOffType === 'WRITE_OFF_EXPIRED' ? '#dc2626' : '#e2e8f0'}`,
+                  backgroundColor: writeOffType === 'WRITE_OFF_EXPIRED' ? '#fef2f2' : '#ffffff',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
               >
-                <option value="WRITE_OFF_EXPIRED">Expired Stock (Past expiration date)</option>
-                <option value="WRITE_OFF_DAMAGED">Damaged / Broken / Leaking Goods</option>
-              </select>
-            </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#991b1b', fontSize: '0.9rem' }}>
+                  <Clock size={16} /> Expired Stock
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                  Product passed best-before or expiration date and is no longer sellable.
+                </div>
+              </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600 }}>Quantity to Write Off</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div
+                onClick={() => setWriteOffType('WRITE_OFF_DAMAGED')}
+                style={{
+                  border: `2px solid ${writeOffType === 'WRITE_OFF_DAMAGED' ? '#dc2626' : '#e2e8f0'}`,
+                  backgroundColor: writeOffType === 'WRITE_OFF_DAMAGED' ? '#fef2f2' : '#ffffff',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#991b1b', fontSize: '0.9rem' }}>
+                  <AlertTriangle size={16} /> Damaged / Ruptured Goods
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                  Broken packaging, cracked containers, spills, or in-store handling damage.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2: Quantity to Discard with Integer Step=1 */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: 0 }}>
+                2. Quantity to Discard (Units) *
+              </label>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
                   className={`btn btn-sm ${writeOffMode === 'full' ? 'btn-primary' : 'btn-outline'}`}
+                  style={writeOffMode === 'full' ? { backgroundColor: '#dc2626', borderColor: '#dc2626' } : {}}
                   onClick={() => {
                     setWriteOffMode('full');
                     setWriteOffQuantity(Number(selectedBatch?.currentQuantity));
@@ -1088,6 +1151,7 @@ export default function InventorySummary() {
                 <button
                   type="button"
                   className={`btn btn-sm ${writeOffMode === 'partial' ? 'btn-primary' : 'btn-outline'}`}
+                  style={writeOffMode === 'partial' ? { backgroundColor: '#dc2626', borderColor: '#dc2626' } : {}}
                   onClick={() => {
                     setWriteOffMode('partial');
                     setWriteOffQuantity(1);
@@ -1097,31 +1161,124 @@ export default function InventorySummary() {
                 </button>
               </div>
             </div>
+
+            {writeOffMode === 'partial' && (
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max={Number(selectedBatch?.currentQuantity)}
+                  required
+                  className="form-input mono"
+                  value={writeOffQuantity}
+                  onChange={(e) => setWriteOffQuantity(e.target.value)}
+                  placeholder="Enter number of units to write off..."
+                  style={{ fontSize: '1.1rem', fontWeight: 700, padding: '10px 14px' }}
+                />
+
+                {/* Quick Presets for Partial Write-Off */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Quick Presets:</span>
+                  {[1, 5, 10, 20, Math.floor(Number(selectedBatch?.currentQuantity || 0) / 2)]
+                    .filter((val, idx, arr) => val > 0 && val < Number(selectedBatch?.currentQuantity) && arr.indexOf(val) === idx)
+                    .map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                        onClick={() => setWriteOffQuantity(num)}
+                      >
+                        {num} {selectedBatch?.product?.unit}s
+                      </button>
+                    ))}
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                    onClick={() => setWriteOffQuantity(Number(selectedBatch?.currentQuantity))}
+                  >
+                    All ({Number(selectedBatch?.currentQuantity)})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Real-time Stock Balance Transition Card */}
+            {selectedBatch && (
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  border: '1.5px solid #fed7aa',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto 1fr auto 1fr',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  gap: '6px',
+                  marginTop: '10px'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Current Stock
+                  </div>
+                  <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                    {Number(selectedBatch.currentQuantity)} {selectedBatch.product?.unit}s
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#dc2626' }}>−</div>
+
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#dc2626', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Discard
+                  </div>
+                  <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626' }}>
+                    {writeOffMode === 'full' ? Number(selectedBatch.currentQuantity) : Number(writeOffQuantity) || 0} {selectedBatch.product?.unit}s
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#16a34a' }}>=</div>
+
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#16a34a', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Remaining Stock
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: '1.1rem',
+                      fontWeight: 800,
+                      color:
+                        Math.max(
+                          0,
+                          Number(selectedBatch.currentQuantity) -
+                            (writeOffMode === 'full' ? Number(selectedBatch.currentQuantity) : Number(writeOffQuantity) || 0)
+                        ) === 0
+                          ? '#94a3b8'
+                          : '#16a34a'
+                    }}
+                  >
+                    {Math.max(
+                      0,
+                      Number(selectedBatch.currentQuantity) -
+                        (writeOffMode === 'full' ? Number(selectedBatch.currentQuantity) : Number(writeOffQuantity) || 0)
+                    )}{' '}
+                    {selectedBatch.product?.unit}s
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* If Partial Quantity */}
-          {writeOffMode === 'partial' && (
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600 }}>Specify Quantity to Discard *</label>
-              <input
-                type="number"
-                step="any"
-                min="0.01"
-                max={Number(selectedBatch?.currentQuantity)}
-                required
-                className="form-input mono"
-                value={writeOffQuantity}
-                onChange={(e) => setWriteOffQuantity(e.target.value)}
-                placeholder="Number of units damaged..."
-              />
-            </div>
-          )}
-
-          {/* Estimated Financial Loss Card */}
+          {/* Step 3: Estimated Financial Loss Card */}
           <div
             style={{
               backgroundColor: '#fff1f2',
-              border: '1px solid #fecdd3',
+              border: '1.5px solid #fecdd3',
               borderRadius: '10px',
               padding: '12px 16px',
               display: 'flex',
@@ -1131,18 +1288,21 @@ export default function InventorySummary() {
             }}
           >
             <div>
-              <span style={{ fontSize: '0.8rem', color: '#9f1239' }}>Estimated Financial Loss Value:</span>
-              <div style={{ fontSize: '0.75rem', color: '#e11d48' }}>
-                ({writeOffMode === 'full' ? Number(selectedBatch?.currentQuantity) : Number(writeOffQuantity) || 0} units × ${Number(selectedBatch?.costPrice || 0).toFixed(2)})
+              <span style={{ fontSize: '0.8rem', color: '#9f1239', fontWeight: 600 }}>
+                Audited Financial Loss Impact:
+              </span>
+              <div style={{ fontSize: '0.75rem', color: '#e11d48', marginTop: '2px' }}>
+                ({writeOffMode === 'full' ? Number(selectedBatch?.currentQuantity) : Number(writeOffQuantity) || 0} units × ${Number(selectedBatch?.costPrice || 0).toFixed(2)} purchase cost)
               </div>
             </div>
-            <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#be123c' }}>
+            <div className="mono" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#be123c' }}>
               -${((writeOffMode === 'full' ? Number(selectedBatch?.currentQuantity) : Number(writeOffQuantity) || 0) * Number(selectedBatch?.costPrice || 0)).toFixed(2)} USD
             </div>
           </div>
 
+          {/* Step 4: Audit Reason */}
           <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label className="form-label" style={{ fontWeight: 600 }}>Audit Reason *</label>
+            <label className="form-label" style={{ fontWeight: 700 }}>4. Audit Reason *</label>
             <input
               type="text"
               required
@@ -1158,7 +1318,8 @@ export default function InventorySummary() {
                 'Expired past shelf life',
                 'Packaging ruptured or broken',
                 'Cold chain temperature failure',
-                'Spoiled or pest contamination'
+                'Spoiled or pest contamination',
+                'Customer dropped in aisle'
               ].map((reasonText) => (
                 <button
                   key={reasonText}
@@ -1180,10 +1341,11 @@ export default function InventorySummary() {
             <button
               type="submit"
               className="btn"
-              style={{ backgroundColor: '#dc2626', color: '#ffffff', minWidth: '150px' }}
+              style={{ backgroundColor: '#dc2626', color: '#ffffff', minWidth: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               disabled={actionLoading}
             >
-              {actionLoading ? 'Processing...' : 'Confirm Write-Off'}
+              <Trash2 size={16} />
+              {actionLoading ? 'Processing...' : `Confirm Write-Off (-${writeOffMode === 'full' ? Number(selectedBatch?.currentQuantity) : Number(writeOffQuantity) || 0} units)`}
             </button>
           </div>
         </form>

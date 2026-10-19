@@ -36,6 +36,13 @@ export default function CategoryList() {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   const openCreateModal = () => {
     setIsEditing(false);
     setEditId(null);

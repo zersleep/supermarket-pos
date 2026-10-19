@@ -29,8 +29,28 @@ export function LoadingSpinner({ text = 'Loading...' }) {
   );
 }
 
-export function Alert({ type = 'info', message, onClose }) {
-  if (!message) return null;
+export function Alert({ type = 'info', message, onClose, autoDismiss = true, duration = 3500 }) {
+  const [visible, setVisible] = React.useState(Boolean(message));
+
+  React.useEffect(() => {
+    if (message) {
+      setVisible(true);
+      // Auto-dismiss success notifications automatically (or when autoDismiss is true and not danger)
+      if (type === 'success' || (autoDismiss && type !== 'danger')) {
+        const timer = setTimeout(() => {
+          setVisible(false);
+          if (onClose) {
+            onClose();
+          }
+        }, duration);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setVisible(false);
+    }
+  }, [message, type, autoDismiss, duration, onClose]);
+
+  if (!visible || !message) return null;
 
   const config = {
     info: {
@@ -66,6 +86,11 @@ export function Alert({ type = 'info', message, onClose }) {
 
   const IconComponent = config.icon;
 
+  const handleDismiss = () => {
+    setVisible(false);
+    if (onClose) onClose();
+  };
+
   return (
     <div
       style={{
@@ -79,16 +104,18 @@ export function Alert({ type = 'info', message, onClose }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         fontSize: '0.875rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+        animation: 'alertSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <IconComponent size={18} style={{ flexShrink: 0 }} />
-        <span>{message}</span>
+        <span style={{ fontWeight: 500 }}>{message}</span>
       </div>
-      {onClose && (
+      {(onClose || type === 'success') && (
         <button
-          onClick={onClose}
+          type="button"
+          onClick={handleDismiss}
           style={{
             background: 'none',
             border: 'none',
@@ -97,12 +124,26 @@ export function Alert({ type = 'info', message, onClose }) {
             opacity: 0.7,
             display: 'flex',
             alignItems: 'center',
-            padding: '2px'
+            padding: '4px',
+            borderRadius: '6px'
           }}
+          title="Dismiss notification"
         >
           <X size={16} />
         </button>
       )}
+      <style>{`
+        @keyframes alertSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
