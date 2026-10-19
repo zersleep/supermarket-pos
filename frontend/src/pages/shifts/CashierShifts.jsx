@@ -11,7 +11,13 @@ import {
   FileText,
   AlertCircle,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Search,
+  X,
+  RotateCcw,
+  ShieldCheck,
+  ArrowRight,
+  ShoppingCart
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +31,10 @@ export default function CashierShifts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Shift History Filters
+  const [shiftSearch, setShiftSearch] = useState('');
+  const [shiftStatusFilter, setShiftStatusFilter] = useState('ALL');
 
   // Modals
   const [openModalVisible, setOpenModalVisible] = useState(false);
@@ -186,6 +196,20 @@ export default function CashierShifts() {
 
   const khrExchangeRate = 4100;
 
+  // Filtered shift history
+  const filteredShiftHistory = shiftHistory.filter((s) => {
+    const cashierName = s.cashier?.fullName || s.cashier?.username || '';
+    const matchesSearch =
+      shiftSearch === '' ||
+      cashierName.toLowerCase().includes(shiftSearch.toLowerCase()) ||
+      s.id.toLowerCase().includes(shiftSearch.toLowerCase());
+
+    if (!matchesSearch) return false;
+    if (shiftStatusFilter === 'OPEN') return s.status === 'OPEN';
+    if (shiftStatusFilter === 'CLOSED') return s.status === 'CLOSED';
+    return true;
+  });
+
   return (
     <div>
       {/* Top Header */}
@@ -223,6 +247,82 @@ export default function CashierShifts() {
 
       <Alert type="danger" message={error} onClose={() => setError('')} />
       <Alert type="success" message={success} onClose={() => setSuccess('')} />
+
+      {/* Visual 4-Step Shift Lifecycle Workflow Guide */}
+      <div
+        className="card"
+        style={{
+          padding: '16px 20px',
+          marginBottom: '22px',
+          backgroundColor: '#ffffff',
+          border: '1.5px solid #e2e8f0'
+        }}
+      >
+        <div
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: '#1e40af',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <Clock size={16} /> Cashier Shift & Drawer Reconciliation Workflow
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+              1
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>Open Register & Float</div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                Declare starting cash drawer balance (e.g. $50.00) at shift start.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+              2
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e40af' }}>Checkout Sales</div>
+              <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '2px' }}>
+                Cash & KHQR sales accumulate. Drawer cash-in / drops audited in real time.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#fef3c7', borderRadius: '10px', border: '1px solid #fde68a' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#d97706', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+              3
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#92400e' }}>Count Physical Cash</div>
+              <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '2px' }}>
+                Cashier counts cash & coins in drawer at shift end (built-in bill calculator).
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px 12px', backgroundColor: '#ecfdf5', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+              4
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#047857' }}>Reconcile & Z-Report</div>
+              <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '2px' }}>
+                System computes cash variance (Balanced/Surplus/Short) & prints official Z-Report.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Active Shift Summary Panel */}
       {activeShift ? (
@@ -321,7 +421,7 @@ export default function CashierShifts() {
 
       {/* Shift History Table */}
       <div className="card" style={{ padding: '22px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
               Shift History & Reconciliation Records
@@ -330,13 +430,84 @@ export default function CashierShifts() {
               Audit-trail of all register sessions, cash drawers, and end-of-shift variances
             </p>
           </div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+            Showing <strong>{filteredShiftHistory.length}</strong> of {shiftHistory.length} shifts
+          </div>
+        </div>
+
+        {/* Filter Bar for Shift History */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '18px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+            <Search
+              size={18}
+              style={{ position: 'absolute', left: '12px', top: '10px', color: '#64748b' }}
+            />
+            <input
+              type="text"
+              className="form-input"
+              style={{ paddingLeft: '38px', paddingRight: shiftSearch ? '36px' : '14px' }}
+              placeholder="Search by cashier name or shift ID..."
+              value={shiftSearch}
+              onChange={(e) => setShiftSearch(e.target.value)}
+            />
+            {shiftSearch && (
+              <button
+                type="button"
+                onClick={() => setShiftSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px',
+                  borderRadius: '50%'
+                }}
+                title="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <select
+            className="form-select"
+            style={{ width: '160px' }}
+            value={shiftStatusFilter}
+            onChange={(e) => setShiftStatusFilter(e.target.value)}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="OPEN">Open Shifts</option>
+            <option value="CLOSED">Closed Shifts</option>
+          </select>
+
+          {(shiftSearch || shiftStatusFilter !== 'ALL') && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                setShiftSearch('');
+                setShiftStatusFilter('ALL');
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Reset filters"
+            >
+              <RotateCcw size={14} /> Clear
+            </button>
+          )}
         </div>
 
         {loading ? (
           <LoadingSpinner text="Loading shifts history..." />
-        ) : shiftHistory.length === 0 ? (
+        ) : filteredShiftHistory.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-            No shift history records available.
+            No shift history records match the selected filter.
           </div>
         ) : (
           <div className="table-container">
@@ -356,7 +527,7 @@ export default function CashierShifts() {
                 </tr>
               </thead>
               <tbody>
-                {shiftHistory.map((s) => {
+                {filteredShiftHistory.map((s) => {
                   const diff = s.difference !== null ? Number(s.difference) : null;
                   const isBalanced = diff === 0;
                   const isSurplus = diff > 0;

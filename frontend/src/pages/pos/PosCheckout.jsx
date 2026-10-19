@@ -21,13 +21,14 @@ import {
   PlayCircle,
   Tag,
   Keyboard,
-  Receipt
+  Receipt,
+  Boxes
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { usePos } from '../../context/PosContext';
 import { useAuth } from '../../context/AuthContext';
-import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
+import { LoadingSpinner, Alert, StatCard } from '../../components/common/LoadingSpinner';
 import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
 import {
@@ -454,9 +455,104 @@ export default function PosCheckout() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: 'calc(100vh - 120px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Top Page Header (Visual Parity with Manager & Owner) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Checkout Register</h1>
+            <span className="badge badge-primary">Register #01</span>
+            {activeShift ? (
+              <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                Shift Active ({user?.fullName || user?.username})
+              </span>
+            ) : (
+              <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                Shift Closed
+              </span>
+            )}
+          </div>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '3px', margin: 0 }}>
+            Real-time barcode scanning, automated KHQR payment detection, FEFO inventory batches, and receipt printing
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowDemoBarcodes(!showDemoBarcodes)}
+            className="btn btn-outline btn-sm"
+            title="Toggle 1-Click Demo Barcode Scanner [F2]"
+            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+          >
+            <Zap size={14} color="#2563eb" /> {showDemoBarcodes ? 'Hide Barcodes' : 'Demo Barcodes [F2]'}
+          </button>
+
+          {parkedOrders.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setParkedListModalOpen(true)}
+              className="btn btn-sm"
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fde68a',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 700
+              }}
+            >
+              <PauseCircle size={14} /> Parked Orders ({parkedOrders.length})
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => navigate('/shifts')}
+            className="btn btn-outline btn-sm"
+            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+          >
+            <Clock size={14} /> Shifts & Drawer
+          </button>
+        </div>
+      </div>
+
+      {/* Top Register KPI Strip */}
+      <div className="grid-4">
+        <StatCard
+          title="Drawer Cash Float"
+          value={`$${activeShift ? Number(activeShift.openingCash).toFixed(2) : '0.00'}`}
+          subtitle={activeShift ? 'Starting drawer float' : 'Open shift to initialize'}
+          icon={DollarSign}
+          color="#2563eb"
+        />
+        <StatCard
+          title="Shift Cash Sales"
+          value={`$${activeShift ? Number(activeShift.cashSalesTotal).toFixed(2) : '0.00'}`}
+          subtitle={`${activeShift?._count?.sales || 0} orders processed`}
+          icon={CheckCircle2}
+          color="#10b981"
+        />
+        <StatCard
+          title="Catalog Stock"
+          value={`${products.length} Items`}
+          subtitle={`${products.filter((p) => p.currentStock > 0).length} in stock ready to scan`}
+          icon={Boxes}
+          color="#8b5cf6"
+        />
+        <StatCard
+          title="Parked Carts"
+          value={`${parkedOrders.length} On Hold`}
+          subtitle={parkedOrders.length > 0 ? 'Click to resume customer' : 'No carts on hold'}
+          icon={PauseCircle}
+          color="#f59e0b"
+        />
+      </div>
+
       {/* Main POS Interface (Left: Catalog, Right: Cart) */}
-      <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: '20px', minHeight: '620px', height: 'calc(100vh - 295px)' }}>
         {/* LEFT PANEL: Catalog, Barcode Scanner, & Category Filters */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'hidden' }}>
           
@@ -645,15 +741,30 @@ export default function PosCheckout() {
 
           <Alert type="danger" message={error} onClose={() => setError('')} />
 
-          {/* Product Cards Grid with Fixed Borders and Pictures */}
+          {/* Product Cards Grid with Fixed 4-Columns and Clear Pictures */}
+          <style>{`
+            .pos-product-grid {
+              display: grid;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 12px;
+              align-content: start;
+            }
+            @media (max-width: 1400px) {
+              .pos-product-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+              }
+            }
+            @media (max-width: 950px) {
+              .pos-product-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+              }
+            }
+          `}</style>
           <div
+            className="pos-product-grid"
             style={{
               flex: 1,
               overflowY: 'auto',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '14px',
-              alignContent: 'start',
               paddingRight: '4px'
             }}
           >
@@ -685,7 +796,7 @@ export default function PosCheckout() {
                     }}
                     style={{
                       border: '1.5px solid #e2e8f0',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       overflow: 'hidden',
                       backgroundColor: '#ffffff',
                       display: 'flex',
@@ -709,15 +820,18 @@ export default function PosCheckout() {
                       e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
                     }}
                   >
-                    {/* Fixed Product Picture Container */}
+                    {/* Fixed 135px Product Picture Container */}
                     <div
                       style={{
-                        height: '120px',
+                        height: '135px',
                         width: '100%',
                         position: 'relative',
                         overflow: 'hidden',
                         backgroundColor: '#f8fafc',
-                        borderBottom: '1px solid #f1f5f9'
+                        borderBottom: '1px solid #f1f5f9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
                     >
                       <img
@@ -727,9 +841,15 @@ export default function PosCheckout() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          transition: 'transform 0.3s ease'
+                          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                         }}
                         loading="lazy"
+                        onMouseEnter={(e) => {
+                          if (!isOutOfStock) e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
                       />
 
                       {/* Floating Top SKU Badge */}
@@ -738,14 +858,15 @@ export default function PosCheckout() {
                           position: 'absolute',
                           top: '6px',
                           left: '6px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.94)',
                           backdropFilter: 'blur(4px)',
                           padding: '2px 6px',
                           borderRadius: '6px',
-                          fontSize: '0.675rem',
+                          fontSize: '0.65rem',
                           fontWeight: 700,
                           color: '#334155',
-                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                         }}
                         className="mono"
                       >
@@ -764,7 +885,7 @@ export default function PosCheckout() {
                           className={`badge ${
                             isOutOfStock ? 'badge-danger' : p.isLowStock ? 'badge-warning' : 'badge-success'
                           }`}
-                          style={{ fontSize: '0.65rem', padding: '2px 7px' }}
+                          style={{ fontSize: '0.625rem', padding: '2px 6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
                         >
                           {isOutOfStock ? 'Out of Stock' : `${p.currentStock} in stock`}
                         </span>
@@ -774,18 +895,19 @@ export default function PosCheckout() {
                     {/* Fixed Details Area */}
                     <div
                       style={{
-                        padding: '10px 12px',
+                        padding: '10px 11px',
                         display: 'flex',
                         flexDirection: 'column',
                         flex: 1,
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        gap: '6px'
                       }}
                     >
                       <div>
                         <div
                           style={{
                             fontWeight: 700,
-                            fontSize: '0.875rem',
+                            fontSize: '0.85rem',
                             color: '#0f172a',
                             lineHeight: 1.35,
                             height: '36px',
@@ -794,32 +916,45 @@ export default function PosCheckout() {
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical'
                           }}
+                          title={p.name}
                         >
                           {p.name}
                         </div>
 
-                        {p.barcode && (
-                          <div
-                            className="mono"
-                            style={{
-                              fontSize: '0.675rem',
-                              color: '#64748b',
-                              marginTop: '3px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <Barcode size={11} /> {p.barcode}
-                          </div>
-                        )}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '2px'
+                          }}
+                        >
+                          {p.barcode ? (
+                            <span
+                              className="mono"
+                              style={{
+                                fontSize: '0.65rem',
+                                color: '#64748b',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                              }}
+                            >
+                              <Barcode size={11} /> {p.barcode}
+                            </span>
+                          ) : p.category?.name ? (
+                            <span style={{ fontSize: '0.65rem', color: '#64748b', backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>
+                              {p.category.name}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
 
                       {/* Fixed Price & Add Section */}
                       <div
                         style={{
-                          marginTop: '10px',
-                          paddingTop: '8px',
+                          marginTop: '6px',
+                          paddingTop: '6px',
                           borderTop: '1px solid #f1f5f9',
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -827,10 +962,10 @@ export default function PosCheckout() {
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb' }} className="mono">
+                          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2563eb' }} className="mono">
                             ${Number(p.sellingPrice).toFixed(2)}
                           </div>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
+                          <div style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b' }}>
                             {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
                           </div>
                         </div>
@@ -839,11 +974,15 @@ export default function PosCheckout() {
                           type="button"
                           className="btn btn-outline btn-sm"
                           style={{
-                            padding: '3px 9px',
+                            padding: '3px 8px',
                             fontSize: '0.725rem',
-                            color: '#2563eb',
-                            borderColor: '#bfdbfe'
+                            fontWeight: 600,
+                            color: isOutOfStock ? '#94a3b8' : '#2563eb',
+                            borderColor: isOutOfStock ? '#e2e8f0' : '#bfdbfe',
+                            backgroundColor: isOutOfStock ? '#f8fafc' : '#eff6ff',
+                            borderRadius: '6px'
                           }}
+                          disabled={isOutOfStock}
                         >
                           + Add
                         </button>
@@ -1330,34 +1469,41 @@ export default function PosCheckout() {
         maxWidth="460px"
       >
         <form onSubmit={handleConfirmHoldCart} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ fontSize: '0.725rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>
+            ⏸ Cart Suspension Details
+          </div>
+
           <div style={{ fontSize: '0.875rem', color: '#475569' }}>
             Park this order to assist the next customer in line. You can resume this order at any time from <strong>Parked Orders</strong>.
           </div>
 
           <div>
-            <label className="form-label">Order Reference / Customer Name (Optional):</label>
+            <label className="form-label">Order Reference / Customer Note:</label>
             <input
               type="text"
               className="form-input"
               value={holdNoteInput}
               onChange={(e) => setHoldNoteInput(e.target.value)}
-              placeholder="e.g., Customer in green jacket, Table 3..."
+              placeholder="e.g., Customer in green jacket, Cart #2..."
               autoFocus
             />
           </div>
 
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.8rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span>Items in Cart:</span>
+          <div style={{ backgroundColor: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.825rem' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '8px' }}>
+              Order Snapshot
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ color: '#475569' }}>Items in Cart:</span>
               <strong>{cart.reduce((s, i) => s + i.quantity, 0)} items</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Total Value:</span>
+              <span style={{ color: '#475569' }}>Total Value:</span>
               <strong className="mono" style={{ color: '#2563eb' }}>${grandTotal.toFixed(2)} ({grandTotalKHR.toLocaleString()} ៛)</strong>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
             <button type="button" onClick={() => setHoldModalOpen(false)} className="btn btn-outline">
               Cancel
             </button>
@@ -1376,8 +1522,12 @@ export default function PosCheckout() {
         maxWidth="620px"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ fontSize: '0.725rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>
+            📋 Active Suspended Orders
+          </div>
+
           {parkedOrders.length === 0 ? (
-            <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ padding: '36px', textAlign: 'center', color: '#94a3b8' }}>
               No held orders currently parked.
             </div>
           ) : (
@@ -1391,7 +1541,8 @@ export default function PosCheckout() {
                   backgroundColor: '#ffffff',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                 }}
               >
                 <div>
@@ -1401,7 +1552,7 @@ export default function PosCheckout() {
                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
                     Parked at {new Date(pOrder.createdAt).toLocaleTimeString()} • {pOrder.itemCount} items
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 700, marginTop: '4px' }} className="mono">
+                  <div style={{ fontSize: '0.85rem', color: '#2563eb', fontWeight: 700, marginTop: '4px' }} className="mono">
                     ${Number(pOrder.grandTotal).toFixed(2)} ({(Number(pOrder.grandTotal) * exchangeRate).toLocaleString()} ៛)
                   </div>
                 </div>

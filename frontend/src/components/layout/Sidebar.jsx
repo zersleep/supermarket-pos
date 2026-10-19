@@ -35,8 +35,7 @@ export default function Sidebar() {
       title: 'Operations',
       items: [
         { label: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },
-        { label: 'POS Terminal', path: '/pos', icon: ShoppingCart, show: canOperatePos },
-        { label: 'Scan QR Payments', path: '/pending-payments', icon: QrCode, show: canOperatePos },
+        { label: 'Checkout Register', path: '/pos', icon: ShoppingCart, show: canOperatePos },
         { label: 'Cashier Shifts', path: '/shifts', icon: Clock, show: canOperatePos },
         { label: 'Sales History', path: '/sales', icon: History, show: true }
       ]

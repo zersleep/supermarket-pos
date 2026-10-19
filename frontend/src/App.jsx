@@ -79,11 +79,7 @@ export default function App() {
           />
           <Route
             path="pending-payments"
-            element={
-              <ProtectedRoute allowedRoles={['OWNER', 'ADMIN', 'CASHIER']}>
-                <PendingPayments />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/pos" replace />}
           />
           <Route
             path="shifts"

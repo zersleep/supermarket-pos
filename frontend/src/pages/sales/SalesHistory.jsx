@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, RotateCcw, Calendar, Filter, X } from 'lucide-react';
+import {
+  Search,
+  Eye,
+  RotateCcw,
+  Calendar,
+  Filter,
+  X,
+  DollarSign,
+  ShoppingCart,
+  CheckCircle2,
+  RefreshCw
+} from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
+import { LoadingSpinner, Alert, StatCard } from '../../components/common/LoadingSpinner';
 import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
 
@@ -28,6 +39,22 @@ export default function SalesHistory() {
 
   const { isOwner, isAdmin } = useAuth();
   const canRefund = isOwner || isAdmin;
+
+  // Aggregate KPI Calculations
+  const completedSales = sales.filter(
+    (s) => s.paymentStatus === 'COMPLETED' || s.paymentStatus === 'PARTIALLY_REFUNDED'
+  );
+  const totalUsdVolume = completedSales.reduce(
+    (acc, s) => acc + (s.currency === 'USD' ? Number(s.totalAmount) : 0),
+    0
+  );
+  const totalKhrVolume = completedSales.reduce(
+    (acc, s) => acc + (s.currency === 'KHR' ? Number(s.totalAmount) : 0),
+    0
+  );
+  const refundedCount = sales.filter(
+    (s) => s.paymentStatus === 'REFUNDED' || s.paymentStatus === 'PARTIALLY_REFUNDED'
+  ).length;
 
   const fetchSales = async (query = search) => {
     try {
@@ -153,9 +180,46 @@ export default function SalesHistory() {
             Historical transactions, receipt inspection, and authorized returns
           </p>
         </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => fetchSales(search)} className="btn btn-outline btn-sm">
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
       </div>
 
       <Alert type="danger" message={error} onClose={() => setError('')} />
+
+      {/* KPI Stat Cards */}
+      <div className="grid-4" style={{ marginBottom: '20px' }}>
+        <StatCard
+          title="Total Transactions"
+          value={sales.length}
+          subtitle={`${completedSales.length} completed transactions`}
+          icon={ShoppingCart}
+          color="#2563eb"
+        />
+        <StatCard
+          title="USD Gross Sales"
+          value={`$${totalUsdVolume.toFixed(2)}`}
+          subtitle="Processed in US Dollars"
+          icon={DollarSign}
+          color="#10b981"
+        />
+        <StatCard
+          title="KHR Gross Sales"
+          value={`${totalKhrVolume.toLocaleString()} ៛`}
+          subtitle="Processed in Khmer Riel"
+          icon={CheckCircle2}
+          color="#8b5cf6"
+        />
+        <StatCard
+          title="Refunds & Returns"
+          value={refundedCount}
+          subtitle={refundedCount > 0 ? 'Audited customer returns' : 'Zero returned transactions'}
+          icon={RotateCcw}
+          color={refundedCount > 0 ? '#ef4444' : '#10b981'}
+        />
+      </div>
 
       {/* Filter Bar */}
       <div className="card" style={{ padding: '14px 20px', marginBottom: '20px' }}>

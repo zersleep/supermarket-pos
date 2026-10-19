@@ -164,7 +164,7 @@ export default function Dashboard() {
                 fontWeight: 800
               }}
             >
-              <ShoppingCart size={20} /> Open POS Checkout
+              <ShoppingCart size={20} /> Open Checkout Register
             </button>
           )}
           {canManageInventory && (
@@ -255,23 +255,13 @@ export default function Dashboard() {
             color="#3b82f6"
           />
 
-          {canOperatePos ? (
-            <StatCard
-              title="Pending Scan QR"
-              value={stats.pendingPaymentsCount}
-              subtitle="Awaiting cashier approval"
-              icon={QrCode}
-              color={stats.pendingPaymentsCount > 0 ? '#f59e0b' : '#64748b'}
-            />
-          ) : (
-            <StatCard
-              title="Active Products"
-              value={stats.totalProducts}
-              subtitle="Catalog items"
-              icon={Package}
-              color="#2563eb"
-            />
-          )}
+          <StatCard
+            title="Active Products"
+            value={stats.totalProducts}
+            subtitle="Catalog items tracked"
+            icon={Package}
+            color="#2563eb"
+          />
 
           <StatCard
             title="Low Stock & Expiry"
@@ -356,46 +346,11 @@ export default function Dashboard() {
                   className="btn btn-sm btn-success"
                   style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700 }}
                 >
-                  <ShoppingCart size={14} /> Go to POS Checkout
+                  <ShoppingCart size={14} /> Go to Checkout Register
                 </button>
               </div>
             </div>
           )
-        )}
-
-        {/* Only Cashier, Admin, or Owner sees Cashier Pending QR Payment alert */}
-        {canOperatePos && stats.pendingPaymentsCount > 0 && (
-          <div
-            style={{
-              backgroundColor: '#fffbeb',
-              border: '1px solid #fde68a',
-              padding: '16px 22px',
-              borderRadius: '12px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              boxShadow: '0 2px 6px rgba(245, 158, 11, 0.08)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <QrCode color="#d97706" size={24} />
-              <div>
-                <div style={{ fontWeight: 700, color: '#92400e', fontSize: '0.95rem' }}>
-                  {stats.pendingPaymentsCount} Pending Scan QR Payment(s)
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#b45309' }}>
-                  Customer transactions submitted via Scan QR awaiting cashier verification.
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/pending-payments')}
-              className="btn btn-sm"
-              style={{ backgroundColor: '#f59e0b', color: 'white', fontWeight: 700 }}
-            >
-              Verify Scan QR <ArrowRight size={14} />
-            </button>
-          </div>
         )}
 
         {/* Expired Batches Alert for Inventory Managers and Admins */}
