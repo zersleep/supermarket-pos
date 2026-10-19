@@ -33,10 +33,11 @@ export default function Dashboard() {
     recentSales: []
   });
 
-  const { user, canOperatePos, canViewReports, canManageInventory } = useAuth();
+  const { user, activeShift, canOperatePos, canViewReports, canManageInventory } = useAuth();
   const navigate = useNavigate();
 
   const isInventoryManager = user?.role === 'INVENTORY_MANAGER';
+  const isCashier = user?.role === 'CASHIER';
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -284,6 +285,84 @@ export default function Dashboard() {
 
       {/* Action Alerts Banner: Role-Filtered */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
+        {/* Cashier Shift Status Notice */}
+        {canOperatePos && (
+          !activeShift ? (
+            <div
+              style={{
+                backgroundColor: '#eff6ff',
+                border: '1.5px solid #bfdbfe',
+                padding: '16px 22px',
+                borderRadius: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <Clock color="#2563eb" size={24} />
+                <div>
+                  <div style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.95rem' }}>
+                    Register Shift Not Opened
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>
+                    Your cash drawer is not initialized. Open a shift to record your starting float and process sales.
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/shifts')}
+                className="btn btn-sm btn-primary"
+                style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700 }}
+              >
+                Open Register Shift <ArrowRight size={14} />
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                backgroundColor: '#ecfdf5',
+                border: '1.5px solid #a7f3d0',
+                padding: '16px 22px',
+                borderRadius: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.08)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <Store color="#059669" size={24} />
+                <div>
+                  <div style={{ fontWeight: 700, color: '#065f46', fontSize: '0.95rem' }}>
+                    Register Shift Active • Opened {new Date(activeShift.openedAt).toLocaleTimeString()}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#047857' }}>
+                    Starting Float: ${Number(activeShift.openingCash).toFixed(2)} • Expected in Drawer: ${Number(activeShift.expectedClosingCash).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => navigate('/shifts')}
+                  className="btn btn-sm btn-outline"
+                  style={{ padding: '6px 12px', fontSize: '0.8rem', borderColor: '#a7f3d0', color: '#065f46' }}
+                >
+                  Manage Shift
+                </button>
+                <button
+                  onClick={() => navigate('/pos')}
+                  className="btn btn-sm btn-success"
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700 }}
+                >
+                  <ShoppingCart size={14} /> Go to POS Checkout
+                </button>
+              </div>
+            </div>
+          )
+        )}
+
         {/* Only Cashier, Admin, or Owner sees Cashier Pending QR Payment alert */}
         {canOperatePos && stats.pendingPaymentsCount > 0 && (
           <div
