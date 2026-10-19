@@ -1,5 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Edit, Barcode, CheckCircle, XCircle, X, Upload, Trash2 } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Edit,
+  Barcode,
+  CheckCircle,
+  XCircle,
+  X,
+  Upload,
+  Trash2,
+  RotateCcw,
+  Package,
+  DollarSign,
+  Tag,
+  Boxes,
+  AlertCircle
+} from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
@@ -44,12 +60,12 @@ export default function ProductList() {
 
   const { canManageProducts } = useAuth();
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (query = search) => {
     try {
       setLoading(true);
       setError('');
       const [prodRes, catRes] = await Promise.all([
-        api.get(`/products?search=${encodeURIComponent(search)}&categoryId=${selectedCategory}&status=${statusFilter}&limit=50`),
+        api.get(`/products?search=${encodeURIComponent(query)}&categoryId=${selectedCategory}&status=${statusFilter}&limit=50`),
         api.get('/categories')
       ]);
       setProducts(prodRes.data || []);
@@ -61,31 +77,37 @@ export default function ProductList() {
     }
   };
 
+  // Automatically fetch on filter change or debounced search typing
   useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, statusFilter]);
+    const timer = setTimeout(() => {
+      fetchProducts(search);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [search, selectedCategory, statusFilter]);
+
+  // Auto-dismiss success notification after 3.5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess('');
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchProducts();
+    fetchProducts(search);
   };
 
-  const handleClearSearch = async () => {
+  const handleClearSearch = () => {
     setSearch('');
-    try {
-      setLoading(true);
-      setError('');
-      const [prodRes, catRes] = await Promise.all([
-        api.get(`/products?search=&categoryId=${selectedCategory}&status=${statusFilter}&limit=50`),
-        api.get('/categories')
-      ]);
-      setProducts(prodRes.data || []);
-      setCategories(catRes.data || []);
-    } catch (err) {
-      setError(err.message || 'Failed to load products.');
-    } finally {
-      setLoading(false);
-    }
+  };
+
+  const handleClearAllFilters = () => {
+    setSearch('');
+    setSelectedCategory('');
+    setStatusFilter('active');
   };
 
   const handleImageFileSelect = (e) => {
@@ -239,7 +261,7 @@ export default function ProductList() {
 
       {/* Filter Bar */}
       <div className="card" style={{ padding: '14px 20px', marginBottom: '20px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <Search
               size={18}
@@ -249,7 +271,7 @@ export default function ProductList() {
               type="text"
               className="form-input"
               style={{ paddingLeft: '38px', paddingRight: search ? '36px' : '14px' }}
-              placeholder="Search by name, SKU, or barcode..."
+              placeholder="Search by name, SKU, or barcode (press Enter)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -304,9 +326,17 @@ export default function ProductList() {
             <option value="all">All</option>
           </select>
 
-          <button type="submit" className="btn btn-primary">
-            Search
-          </button>
+          {(search || selectedCategory || statusFilter !== 'active') && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleClearAllFilters}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Reset all filters"
+            >
+              <RotateCcw size={14} /> Clear Filters
+            </button>
+          )}
         </form>
       </div>
 
@@ -406,69 +436,266 @@ export default function ProductList() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={isEditing ? 'Edit Product' : 'Add New Product'}
-        maxWidth="600px"
+        title={isEditing ? 'Edit Product Details' : 'Add New Product to Catalog'}
+        maxWidth="840px"
       >
         <form onSubmit={handleSubmit}>
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Product Name *</label>
+          {/* Helpful context banner */}
+          <div
+            style={{
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '0.85rem',
+              color: '#1e40af'
+            }}
+          >
+            <Package size={18} color="#2563eb" style={{ flexShrink: 0 }} />
+            <div>
+              {isEditing
+                ? 'Update master product information, pricing, scannable barcodes, and inventory rules.'
+                : 'Fill in product identification, retail pricing, picture, and an optional initial stock batch.'}
+            </div>
+          </div>
+
+          {/* Section 1: Product Identification & Category */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px 18px',
+              marginBottom: '16px'
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: '#2563eb',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Barcode size={16} /> 1. Product Identification & Category
+            </div>
+
+            <div className="grid-2">
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Product Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="e.g. Coca-Cola Can 330ml"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Full brand and product name displayed on POS & customer receipt.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Category</label>
+                <select
+                  className="form-select"
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                >
+                  <option value="">None / Uncategorized</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Used for POS category filtering and inventory breakdown reports.
+                </span>
+              </div>
+            </div>
+
+            <div className="grid-2" style={{ marginTop: '4px' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  SKU (Stock Keeping Unit) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="form-input mono"
+                  placeholder="e.g. BEV-COKE-330"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Unique internal inventory code (e.g. BEV-001).
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  Barcode (UPC / EAN / Scannable)
+                </label>
+                <input
+                  type="text"
+                  className="form-input mono"
+                  placeholder="e.g. 884100100102"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Ready for instant hardware barcode scanner input at checkout.
+                </span>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0, marginTop: '4px' }}>
+              <label className="form-label" style={{ fontWeight: 600 }}>Product Description (Optional)</label>
               <input
                 type="text"
-                required
                 className="form-input"
-                placeholder="e.g. Coca-Cola Can 330ml"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">SKU (Stock Keeping Unit) *</label>
-              <input
-                type="text"
-                required
-                className="form-input mono"
-                placeholder="e.g. BEV-COKE-330"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="Flavor, volume, packaging specifications, or supplier notes..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Barcode (Scan or Type)</label>
-              <input
-                type="text"
-                className="form-input mono"
-                placeholder="e.g. 884100100102"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              />
+          {/* Section 2: Pricing & Stock Control */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px 18px',
+              marginBottom: '16px'
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: '#16a34a',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <DollarSign size={16} /> 2. Pricing & Stock Thresholds
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Category</label>
-              <select
-                className="form-select"
-                value={formData.categoryId}
-                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+            <div className="grid-2">
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, color: '#15803d' }}>
+                  Selling Price (USD $) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  className="form-input mono"
+                  placeholder="0.00"
+                  value={formData.sellingPrice}
+                  onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                  style={{ borderColor: '#86efac', fontWeight: 700 }}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#16a34a', marginTop: '3px', display: 'block' }}>
+                  Retail price charged to customers at POS register.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  Cost Price (USD $) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  className="form-input mono"
+                  placeholder="0.00"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Wholesale purchase cost from supplier (used to calculate profit margins).
+                </span>
+              </div>
+            </div>
+
+            <div className="grid-2" style={{ marginTop: '4px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Unit of Measurement</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="piece, can, bottle, kg, box, pack"
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  How items are counted (default: piece).
+                </span>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Low Stock Alert Level</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input mono"
+                  placeholder="10"
+                  value={formData.reorderLevel}
+                  onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+                />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  Triggers dashboard warning when total units drop below this quantity.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Product Picture */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px 18px',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
               >
-                <option value="">None / Uncategorized</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Product Picture Upload & Live Preview */}
-          <div className="form-group" style={{ marginBottom: '18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label className="form-label" style={{ marginBottom: 0, fontWeight: 600 }}>Product Picture</label>
+                <Upload size={16} /> 3. Product Picture
+              </div>
               <button
                 type="button"
                 onClick={() => setShowUrlInput(!showUrlInput)}
@@ -481,7 +708,7 @@ export default function ProductList() {
                   textDecoration: 'underline'
                 }}
               >
-                {showUrlInput ? 'Hide image link' : 'Or enter image link'}
+                {showUrlInput ? 'Hide image URL link' : 'Or enter image URL link'}
               </button>
             </div>
 
@@ -494,7 +721,7 @@ export default function ProductList() {
               onChange={handleImageFileSelect}
             />
 
-            {/* Image Upload Area / Preview Card */}
+            {/* Picture Upload Area / Preview Card */}
             {formData.imageUrl ? (
               <div
                 style={{
@@ -502,7 +729,7 @@ export default function ProductList() {
                   alignItems: 'center',
                   gap: '16px',
                   padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: '#ffffff',
                   border: '1.5px solid #bfdbfe',
                   borderRadius: '12px'
                 }}
@@ -511,8 +738,8 @@ export default function ProductList() {
                   src={formData.imageUrl}
                   alt="Product preview"
                   style={{
-                    width: '72px',
-                    height: '72px',
+                    width: '80px',
+                    height: '80px',
                     borderRadius: '10px',
                     objectFit: 'cover',
                     border: '1.5px solid #2563eb',
@@ -525,14 +752,17 @@ export default function ProductList() {
                 />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>
-                    Picture ready
+                    Picture successfully selected
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    This picture will display on product tables and cashier POS touch cards.
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       type="button"
                       className="btn btn-outline btn-sm"
                       onClick={() => fileInputRef.current?.click()}
-                      style={{ fontSize: '0.75rem', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                      style={{ fontSize: '0.75rem', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
                       <Upload size={14} /> Change Picture
                     </button>
@@ -542,7 +772,7 @@ export default function ProductList() {
                       onClick={() => setFormData({ ...formData, imageUrl: '' })}
                       style={{
                         fontSize: '0.75rem',
-                        padding: '5px 10px',
+                        padding: '5px 12px',
                         color: '#dc2626',
                         borderColor: '#fca5a5',
                         display: 'flex',
@@ -550,7 +780,7 @@ export default function ProductList() {
                         gap: '5px'
                       }}
                     >
-                      <Trash2 size={14} /> Remove
+                      <Trash2 size={14} /> Remove Picture
                     </button>
                   </div>
                 </div>
@@ -561,7 +791,7 @@ export default function ProductList() {
                 style={{
                   border: '2px dashed #93c5fd',
                   borderRadius: '12px',
-                  padding: '20px',
+                  padding: '22px',
                   textAlign: 'center',
                   backgroundColor: '#eff6ff',
                   cursor: 'pointer',
@@ -570,8 +800,8 @@ export default function ProductList() {
               >
                 <div
                   style={{
-                    width: '44px',
-                    height: '44px',
+                    width: '46px',
+                    height: '46px',
                     borderRadius: '50%',
                     backgroundColor: '#dbeafe',
                     color: '#2563eb',
@@ -583,18 +813,18 @@ export default function ProductList() {
                 >
                   <Upload size={22} />
                 </div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e40af' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1e40af' }}>
                   Click to choose a picture from your device
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-                  Supports PNG, JPG, or WebP files
+                  Select any PNG, JPG, or WebP photo from your computer (auto-resized and optimized)
                 </div>
               </div>
             )}
 
             {/* Optional URL input if toggled */}
             {showUrlInput && (
-              <div style={{ marginTop: '10px' }}>
+              <div style={{ marginTop: '12px' }}>
                 <input
                   type="text"
                   className="form-input"
@@ -606,8 +836,8 @@ export default function ProductList() {
             )}
 
             {/* Demo Sample Pictures Presets */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Presets:</span>
+            <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Demo Presets:</span>
               {[
                 { label: 'Water', url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&auto=format&fit=crop&q=80' },
                 { label: 'Coke', url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=80' },
@@ -620,7 +850,7 @@ export default function ProductList() {
                   key={preset.label}
                   type="button"
                   className="btn btn-outline btn-sm"
-                  style={{ fontSize: '0.675rem', padding: '3px 8px' }}
+                  style={{ fontSize: '0.7rem', padding: '3px 8px' }}
                   onClick={() => setFormData({ ...formData, imageUrl: preset.url })}
                 >
                   {preset.label}
@@ -629,68 +859,35 @@ export default function ProductList() {
             </div>
           </div>
 
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Cost Price ($) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                className="form-input mono"
-                placeholder="0.00"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Selling Price ($) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                className="form-input mono"
-                placeholder="0.00"
-                value={formData.sellingPrice}
-                onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Unit of Measurement</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="piece, can, bottle, kg, box"
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Low Stock Reorder Alert Level</label>
-              <input
-                type="number"
-                min="0"
-                className="form-input mono"
-                value={formData.reorderLevel}
-                onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-              />
-            </div>
-          </div>
-
+          {/* Section 4: Initial Opening Inventory Batch (Only on Create) */}
           {!isEditing && (
-            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px' }}>
-                Initial Opening Stock (Optional)
+            <div
+              style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                marginBottom: '16px'
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Boxes size={16} /> 4. Opening Inventory Batch (Optional)
               </div>
               <div className="grid-2">
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Initial Quantity</label>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Initial Stock Quantity</label>
                   <input
                     type="number"
                     min="0"
@@ -699,45 +896,66 @@ export default function ProductList() {
                     value={formData.initialStock}
                     onChange={(e) => setFormData({ ...formData, initialStock: e.target.value })}
                   />
+                  <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                    Creates starting batch in inventory immediately.
+                  </span>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Batch Expiry Date</label>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Batch Expiry Date</label>
                   <input
                     type="date"
                     className="form-input"
                     value={formData.expiryDate}
                     onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                   />
+                  <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                    Expiration date for the opening batch.
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem' }}>
+          {/* Status and FEFO Toggles */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '24px',
+              padding: '12px 16px',
+              backgroundColor: '#f1f5f9',
+              borderRadius: '10px',
+              marginBottom: '20px'
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.trackExpiry}
                 onChange={(e) => setFormData({ ...formData, trackExpiry: e.target.checked })}
               />
-              Track Expiry Dates (FEFO)
+              Track Expiration Dates (FEFO - First-Expired, First-Out)
             </label>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
               />
-              Active in POS
+              Active (Ready to sell at Cashier POS)
             </label>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '6px' }}>
             <button type="button" className="btn btn-outline" onClick={() => setModalOpen(false)}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={formLoading}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={formLoading}
+              style={{ minWidth: '130px' }}
+            >
               {formLoading ? 'Saving...' : isEditing ? 'Update Product' : 'Create Product'}
             </button>
           </div>
