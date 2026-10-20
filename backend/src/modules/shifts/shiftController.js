@@ -5,6 +5,77 @@ const { recordAuditLog } = require('../../services/auditService');
 const { openShiftSchema, closeShiftSchema, cashMovementSchema } = require('../../validators');
 
 /**
+ * Common Prisma include query for shift sales with completed payments
+ */
+const shiftSalesInclude = {
+  where: {
+    paymentStatus: { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] }
+  },
+  select: {
+    id: true,
+    grandTotal: true,
+    paymentStatus: true,
+    payments: {
+      select: {
+        method: true,
+        amount: true,
+        currency: true,
+        status: true
+      }
+    }
+  }
+};
+
+/**
+ * Helper to compute QR code scan sales and total shift sales dynamically
+ */
+function enrichShiftWithSalesTotals(shift) {
+  if (!shift) return shift;
+
+  let qrSalesTotal = 0;
+  let qrSalesCount = 0;
+  let cashSalesCount = 0;
+
+  if (shift.sales && Array.isArray(shift.sales)) {
+    for (const sale of shift.sales) {
+      const isCompletedSale = ['COMPLETED', 'PARTIALLY_REFUNDED'].includes(sale.paymentStatus);
+      if (!isCompletedSale) continue;
+
+      let saleHasQr = false;
+      let saleHasCash = false;
+
+      if (sale.payments && Array.isArray(sale.payments)) {
+        for (const payment of sale.payments) {
+          if (payment.method === 'QR_PAYMENT' && ['COMPLETED', 'PENDING'].includes(payment.status)) {
+            qrSalesTotal += Number(payment.amount || 0);
+            saleHasQr = true;
+          } else if (payment.method === 'CASH') {
+            saleHasCash = true;
+          }
+        }
+      }
+
+      if (saleHasQr) qrSalesCount++;
+      if (saleHasCash) cashSalesCount++;
+    }
+  }
+
+  const cashSalesTotal = Number(shift.cashSalesTotal || 0);
+  const roundedQrSales = roundToTwo(qrSalesTotal);
+  const totalSales = roundToTwo(cashSalesTotal + roundedQrSales);
+
+  return {
+    ...shift,
+    qrSalesTotal: roundedQrSales,
+    qrSales: roundedQrSales,
+    qrPaymentTotal: roundedQrSales,
+    totalSales,
+    qrSalesCount,
+    cashSalesCount
+  };
+}
+
+/**
  * Get active shift for current cashier
  */
 async function getCurrentShift(req, res, next) {
@@ -15,6 +86,7 @@ async function getCurrentShift(req, res, next) {
         status: 'OPEN'
       },
       include: {
+        cashier: { select: { id: true, fullName: true, username: true } },
         cashMovements: {
           include: {
             user: { select: { id: true, fullName: true, username: true } }
@@ -22,12 +94,17 @@ async function getCurrentShift(req, res, next) {
           orderBy: { createdAt: 'desc' }
         },
         _count: {
-          select: { sales: true }
-        }
+          select: { sales: true, cashMovements: true }
+        },
+        sales: shiftSalesInclude
       }
     });
 
-    return sendSuccess(res, shift);
+    if (!shift) {
+      return sendSuccess(res, null);
+    }
+
+    return sendSuccess(res, enrichShiftWithSalesTotals(shift));
   } catch (err) {
     next(err);
   }
@@ -61,6 +138,11 @@ async function openShift(req, res, next) {
         openingCash,
         expectedClosingCash: openingCash,
         notes: data.notes || null
+      },
+      include: {
+        cashier: { select: { id: true, fullName: true, username: true } },
+        cashMovements: true,
+        _count: { select: { sales: true, cashMovements: true } }
       }
     });
 
@@ -73,7 +155,7 @@ async function openShift(req, res, next) {
       req
     });
 
-    return sendSuccess(res, shift, 'Shift opened successfully.', 201);
+    return sendSuccess(res, enrichShiftWithSalesTotals(shift), 'Shift opened successfully.', 201);
   } catch (err) {
     next(err);
   }
@@ -187,6 +269,17 @@ async function closeShift(req, res, next) {
         actualClosingCash: actualCash,
         difference,
         notes: data.notes || shift.notes
+      },
+      include: {
+        cashier: { select: { id: true, fullName: true, username: true } },
+        cashMovements: {
+          include: {
+            user: { select: { id: true, fullName: true, username: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        },
+        _count: { select: { sales: true, cashMovements: true } },
+        sales: shiftSalesInclude
       }
     });
 
@@ -204,7 +297,7 @@ async function closeShift(req, res, next) {
       req
     });
 
-    return sendSuccess(res, closedShift, 'Shift closed and cash reconciled successfully.');
+    return sendSuccess(res, enrichShiftWithSalesTotals(closedShift), 'Shift closed and cash reconciled successfully.');
   } catch (err) {
     next(err);
   }
@@ -228,7 +321,7 @@ async function getShiftHistory(req, res, next) {
       where.cashierId = cashierId;
     }
 
-    const [total, shifts] = await Promise.all([
+    const [total, rawShifts] = await Promise.all([
       prisma.cashierShift.count({ where }),
       prisma.cashierShift.findMany({
         where,
@@ -243,10 +336,13 @@ async function getShiftHistory(req, res, next) {
             },
             orderBy: { createdAt: 'desc' }
           },
-          _count: { select: { sales: true, cashMovements: true } }
+          _count: { select: { sales: true, cashMovements: true } },
+          sales: shiftSalesInclude
         }
       })
     ]);
+
+    const shifts = rawShifts.map((s) => enrichShiftWithSalesTotals(s));
 
     return sendPaginated(res, shifts, { total, page, limit });
   } catch (err) {

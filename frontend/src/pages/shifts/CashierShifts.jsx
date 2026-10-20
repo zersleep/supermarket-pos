@@ -92,9 +92,9 @@ export default function CashierShifts() {
     setShowBillCounter(false);
   };
 
-  const loadShiftData = async () => {
+  const loadShiftData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError('');
       const [currentRes, histRes] = await Promise.all([
         api.get('/shifts/current'),
@@ -105,12 +105,32 @@ export default function CashierShifts() {
     } catch (err) {
       setError(err.message || 'Failed to load shift records.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadShiftData();
+
+    const handleSaleCompleted = () => {
+      loadShiftData(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadShiftData(true);
+      }
+    };
+
+    window.addEventListener('pos_sale_completed', handleSaleCompleted);
+    window.addEventListener('focus', handleSaleCompleted);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pos_sale_completed', handleSaleCompleted);
+      window.removeEventListener('focus', handleSaleCompleted);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleOpenShift = async (e) => {
@@ -1270,6 +1290,18 @@ export default function CashierShifts() {
                   <span>Cash Sales Total:</span>
                   <span className="mono" style={{ color: '#10b981', fontWeight: 700 }}>
                     +${Number(selectedZReportShift.cashSalesTotal).toFixed(2)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>QR Code Scan Sales:</span>
+                  <span className="mono" style={{ color: '#2563eb', fontWeight: 700 }}>
+                    +${Number(selectedZReportShift.qrSalesTotal || selectedZReportShift.qrSales || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                  <span>Total Shift Sales:</span>
+                  <span className="mono" style={{ color: '#0f172a' }}>
+                    ${Number(selectedZReportShift.totalSales !== undefined ? selectedZReportShift.totalSales : (Number(selectedZReportShift.cashSalesTotal || 0) + Number(selectedZReportShift.qrSalesTotal || selectedZReportShift.qrSales || 0))).toFixed(2)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
