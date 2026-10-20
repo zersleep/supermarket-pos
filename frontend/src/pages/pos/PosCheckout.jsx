@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { usePos } from '../../context/PosContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
 import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
@@ -53,6 +54,9 @@ export default function PosCheckout() {
     discountTotal,
     taxTotal,
     grandTotal,
+    primaryCurrency,
+    setPrimaryCurrency,
+    togglePrimaryCurrency,
     currency,
     setCurrency,
     exchangeRate,
@@ -65,6 +69,8 @@ export default function PosCheckout() {
     resumeParkedOrder,
     deleteParkedOrder
   } = usePos();
+
+  const { t } = useLanguage();
 
   const { activeShift, user } = useAuth();
   const navigate = useNavigate();
@@ -1063,11 +1069,31 @@ export default function PosCheckout() {
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e40af', lineHeight: 1 }} className="currency-amount">
-                          ${Number(p.sellingPrice).toFixed(2)}
+                        <div
+                          style={{
+                            fontSize: '1.15rem',
+                            fontWeight: 800,
+                            color: primaryCurrency === 'KHR' ? '#059669' : '#1e40af',
+                            lineHeight: 1
+                          }}
+                          className="currency-amount"
+                        >
+                          {primaryCurrency === 'KHR'
+                            ? `${Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛`
+                            : `$${Number(p.sellingPrice).toFixed(2)}`}
                         </div>
-                        <div style={{ fontSize: '0.675rem', fontWeight: 700, color: '#64748b', marginTop: '2px' }} className="currency-amount">
-                          {Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛
+                        <div
+                          style={{
+                            fontSize: '0.675rem',
+                            fontWeight: 700,
+                            color: '#64748b',
+                            marginTop: '2px'
+                          }}
+                          className="currency-amount"
+                        >
+                          {primaryCurrency === 'KHR'
+                            ? `$${Number(p.sellingPrice).toFixed(2)} USD`
+                            : `${Math.round(Number(p.sellingPrice) * exchangeRate).toLocaleString()} ៛`}
                         </div>
                       </div>
 
@@ -1276,8 +1302,18 @@ export default function PosCheckout() {
                         {item.product.name}
                       </span>
                     </div>
-                    <span className="currency-amount" style={{ color: '#1e40af', fontWeight: 800, fontSize: '0.9rem', flexShrink: 0 }}>
-                      ${Number(item.lineTotal).toFixed(2)}
+                    <span
+                      className="currency-amount"
+                      style={{
+                        color: primaryCurrency === 'KHR' ? '#059669' : '#1e40af',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        flexShrink: 0
+                      }}
+                    >
+                      {primaryCurrency === 'KHR'
+                        ? `${Math.round(Number(item.lineTotal) * exchangeRate).toLocaleString()} ៛`
+                        : `$${Number(item.lineTotal).toFixed(2)}`}
                     </span>
                   </div>
 
@@ -1285,7 +1321,10 @@ export default function PosCheckout() {
                     {/* Unit price & line discount tag */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b' }}>
-                        ${Number(item.product.sellingPrice).toFixed(2)} / {item.product.unit || 'pcs'}
+                        {primaryCurrency === 'KHR'
+                          ? `${Math.round(Number(item.product.sellingPrice) * exchangeRate).toLocaleString()} ៛`
+                          : `$${Number(item.product.sellingPrice).toFixed(2)}`}{' '}
+                        / {item.product.unit || t('pos.unit', 'pcs')}
                       </span>
                       {item.discount > 0 && (
                         <span
@@ -1298,7 +1337,11 @@ export default function PosCheckout() {
                             fontWeight: 700
                           }}
                         >
-                          {item.discountPercent > 0 ? `${item.discountPercent}% OFF` : `-$${Number(item.discount).toFixed(2)}`}
+                          {item.discountPercent > 0
+                            ? `${item.discountPercent}% OFF`
+                            : primaryCurrency === 'KHR'
+                              ? `-${Math.round(Number(item.discount) * exchangeRate).toLocaleString()} ៛`
+                              : `-$${Number(item.discount).toFixed(2)}`}
                         </span>
                       )}
                       <button
@@ -1380,15 +1423,19 @@ export default function PosCheckout() {
           {/* Totals Summary Banner */}
           <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: '3px', flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b' }}>
-              <span>Subtotal:</span>
-              <span className="currency-amount" style={{ fontWeight: 700 }}>${subtotal.toFixed(2)}</span>
+              <span>{t('pos.subtotal', 'Subtotal')}:</span>
+              <span className="currency-amount" style={{ fontWeight: 700 }}>
+                {primaryCurrency === 'KHR'
+                  ? `${Math.round(subtotal * exchangeRate).toLocaleString()} ៛ ($${subtotal.toFixed(2)})`
+                  : `$${subtotal.toFixed(2)}`}
+              </span>
             </div>
 
             {/* Special Order / Sale Discount Row */}
             {cartDiscount.value > 0 ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#dc2626' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Order Sale ({cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`}):</span>
+                  <span>{t('pos.order_discount', 'Order Promotion')} ({cartDiscount.type === 'percent' ? `${cartDiscount.value}%` : `$${Number(cartDiscount.value).toFixed(2)}`}):</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -1398,10 +1445,14 @@ export default function PosCheckout() {
                     }}
                     style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, fontSize: '0.7rem', textDecoration: 'underline', fontWeight: 600 }}
                   >
-                    Edit
+                    {t('common.edit', 'Edit')}
                   </button>
                 </span>
-                <span className="currency-amount" style={{ fontWeight: 700 }}>-${cartDiscountAmount.toFixed(2)}</span>
+                <span className="currency-amount" style={{ fontWeight: 700 }}>
+                  {primaryCurrency === 'KHR'
+                    ? `-${Math.round(cartDiscountAmount * exchangeRate).toLocaleString()} ៛`
+                    : `-$${cartDiscountAmount.toFixed(2)}`}
+                </span>
               </div>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '1px 0' }}>
@@ -1426,22 +1477,30 @@ export default function PosCheckout() {
                   }}
                   title="Apply Today's Special Sale or Store-wide Discount"
                 >
-                  <Tag size={11} /> + Special Sale / Order Discount
+                  <Tag size={11} /> + {t('pos.order_discount_title', 'Special Sale / Order Discount')}
                 </button>
               </div>
             )}
 
             {itemDiscountTotal > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#dc2626' }}>
-                <span>Item Promotional Discounts:</span>
-                <span className="currency-amount" style={{ fontWeight: 700 }}>-${itemDiscountTotal.toFixed(2)}</span>
+                <span>{t('pos.item_discount', 'Item Discounts')}:</span>
+                <span className="currency-amount" style={{ fontWeight: 700 }}>
+                  {primaryCurrency === 'KHR'
+                    ? `-${Math.round(itemDiscountTotal * exchangeRate).toLocaleString()} ៛`
+                    : `-$${itemDiscountTotal.toFixed(2)}`}
+                </span>
               </div>
             )}
 
             {discountTotal > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#16a34a', fontWeight: 700 }}>
-                <span>Total Customer Savings:</span>
-                <span className="currency-amount">-${discountTotal.toFixed(2)}</span>
+                <span>{t('pos.total_savings', 'Total Savings')}:</span>
+                <span className="currency-amount">
+                  {primaryCurrency === 'KHR'
+                    ? `-${Math.round(discountTotal * exchangeRate).toLocaleString()} ៛`
+                    : `-$${discountTotal.toFixed(2)}`}
+                </span>
               </div>
             )}
 
@@ -1456,13 +1515,33 @@ export default function PosCheckout() {
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>Grand Total:</div>
-                <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 700 }} className="currency-amount">
-                  {grandTotalKHR.toLocaleString()} ៛ KHR
+                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>
+                  {t('pos.grand_total', 'Grand Total')}:
+                </div>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: primaryCurrency === 'KHR' ? '#1e40af' : '#2563eb',
+                    fontWeight: 700
+                  }}
+                  className="currency-amount"
+                >
+                  {primaryCurrency === 'KHR'
+                    ? `$${grandTotal.toFixed(2)} USD`
+                    : `${grandTotalKHR.toLocaleString()} ៛ KHR`}
                 </div>
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1e40af' }} className="currency-amount">
-                ${grandTotal.toFixed(2)}
+              <div
+                style={{
+                  fontSize: '1.75rem',
+                  fontWeight: 800,
+                  color: primaryCurrency === 'KHR' ? '#059669' : '#1e40af'
+                }}
+                className="currency-amount"
+              >
+                {primaryCurrency === 'KHR'
+                  ? `${grandTotalKHR.toLocaleString()} ៛`
+                  : `$${grandTotal.toFixed(2)}`}
               </div>
             </div>
           </div>
@@ -1502,7 +1581,7 @@ export default function PosCheckout() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label style={{ fontSize: '0.725rem', fontWeight: 700, color: '#475569', letterSpacing: '0.04em' }}>
-                  TENDERED CASH
+                  {t('pos.tendered_cash', 'TENDERED CASH')} ({currency === 'KHR' ? 'KHR ៛' : 'USD $'})
                 </label>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   <button
@@ -1561,12 +1640,12 @@ export default function PosCheckout() {
                       style={{ flex: 1.2, padding: '3px 0', fontSize: '0.7rem' }}
                       onClick={setExactCash}
                     >
-                      Exact
+                      {t('pos.exact', 'Exact')}
                     </button>
                   </>
                 ) : (
                   <>
-                    {[10000, 20000, 50000, 100000].map((amt) => (
+                    {[10000, 20000, 50000, 100000, 200000].map((amt) => (
                       <button
                         key={amt}
                         type="button"
@@ -1583,7 +1662,7 @@ export default function PosCheckout() {
                       style={{ flex: 1.2, padding: '3px 0', fontSize: '0.675rem' }}
                       onClick={setExactCash}
                     >
-                      Exact
+                      {t('pos.exact', 'Exact')}
                     </button>
                   </>
                 )}
@@ -1601,21 +1680,28 @@ export default function PosCheckout() {
                 }}
               >
                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>
-                  {isCashSufficient ? 'Change Due:' : 'Status:'}
+                  {isCashSufficient ? t('pos.change_due', 'Change Due') + ':' : t('common.status', 'Status') + ':'}
                 </span>
 
                 {isCashSufficient ? (
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#10b981', fontWeight: 800, fontSize: '1.05rem' }} className="mono">
-                      ${changeUSD.toFixed(2)} USD
+                    <div
+                      style={{
+                        color: currency === 'KHR' ? '#059669' : '#10b981',
+                        fontWeight: 800,
+                        fontSize: '1.05rem'
+                      }}
+                      className="mono"
+                    >
+                      {currency === 'KHR' ? `${changeKHR.toLocaleString()} ៛ KHR` : `$${changeUSD.toFixed(2)} USD`}
                     </div>
-                    <div style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 700 }}>
-                      ≈ {changeKHR.toLocaleString()} ៛ KHR
+                    <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700 }}>
+                      ≈ {currency === 'KHR' ? `$${changeUSD.toFixed(2)} USD` : `${changeKHR.toLocaleString()} ៛ KHR`}
                     </div>
                   </div>
                 ) : (
                   <div style={{ color: '#dc2626', fontWeight: 700, fontSize: '0.85rem' }} className="mono">
-                    Short by ${shortageUSD.toFixed(2)}
+                    Short by {currency === 'KHR' ? `${Math.round(shortageUSD * exchangeRate).toLocaleString()} ៛` : `$${shortageUSD.toFixed(2)}`}
                   </div>
                 )}
               </div>
@@ -1629,9 +1715,11 @@ export default function PosCheckout() {
             disabled={cart.length === 0 || checkoutLoading || (paymentMethod === 'CASH' && !isCashSufficient)}
             onClick={handleCheckout}
           >
-            {checkoutLoading ? 'Processing Checkout...' : (
-              paymentMethod === 'CASH' ? '⚡ Complete Cash Sale' : '📱 Generate Scan QR'
-            )}
+            {checkoutLoading
+              ? t('common.loading', 'Processing Sale...')
+              : paymentMethod === 'CASH'
+                ? `⚡ ${t('pos.complete_payment', 'Complete Cash Sale')} [F8]`
+                : `📱 ${t('pos.khqr', 'Generate Scan QR')} [F9]`}
           </button>
         </div>
       </div>

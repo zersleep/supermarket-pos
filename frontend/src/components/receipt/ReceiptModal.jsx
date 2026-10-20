@@ -131,33 +131,66 @@ export default function ReceiptModal({ isOpen, onClose, saleData, storeInfo }) {
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontWeight: 900,
-              fontSize: '1.1rem',
-              borderTop: '1.5px solid #0f172a',
-              paddingTop: '6px',
-              marginTop: '4px'
-            }}
-          >
-            <span>TOTAL (USD):</span>
-            <span>${grandTotalUSD.toFixed(2)}</span>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontWeight: 800,
-              color: '#1d4ed8',
-              fontSize: '0.95rem'
-            }}
-          >
-            <span>TOTAL (KHR):</span>
-            <span>{grandTotalKHR.toLocaleString()} ៛</span>
-          </div>
+          {store.currencyCode === 'KHR' || localStorage.getItem('pos_primary_currency') === 'KHR' ? (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontWeight: 900,
+                  fontSize: '1.15rem',
+                  color: '#059669',
+                  borderTop: '1.5px solid #0f172a',
+                  paddingTop: '6px',
+                  marginTop: '4px'
+                }}
+              >
+                <span>TOTAL (KHR):</span>
+                <span>{grandTotalKHR.toLocaleString()} ៛</span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontWeight: 800,
+                  color: '#1d4ed8',
+                  fontSize: '0.95rem'
+                }}
+              >
+                <span>TOTAL (USD):</span>
+                <span>${grandTotalUSD.toFixed(2)}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontWeight: 900,
+                  fontSize: '1.1rem',
+                  borderTop: '1.5px solid #0f172a',
+                  paddingTop: '6px',
+                  marginTop: '4px'
+                }}
+              >
+                <span>TOTAL (USD):</span>
+                <span>${grandTotalUSD.toFixed(2)}</span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontWeight: 800,
+                  color: '#1d4ed8',
+                  fontSize: '0.95rem'
+                }}
+              >
+                <span>TOTAL (KHR):</span>
+                <span>{grandTotalKHR.toLocaleString()} ៛</span>
+              </div>
+            </>
+          )}
           <div style={{ fontSize: '0.675rem', color: '#64748b', textAlign: 'right' }}>
             Rate: 1 USD = {exchangeRate.toLocaleString()} KHR
           </div>

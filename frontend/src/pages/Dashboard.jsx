@@ -19,6 +19,8 @@ import {
 import api from '../api/client';
 import { StatCard, LoadingSpinner, Alert } from '../components/common/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import { usePos } from '../context/PosContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -129,7 +131,10 @@ export default function Dashboard() {
     return <LoadingSpinner text="Loading real-time supermarket telemetry..." />;
   }
 
-  const khrExchangeRate = 4100;
+  const { primaryCurrency, exchangeRate } = usePos();
+  const { t } = useLanguage();
+
+  const khrExchangeRate = Number(exchangeRate) || 4100;
   const todayRevenueKhr = Math.round(Number(stats.todayRevenue) * khrExchangeRate);
 
   return (
@@ -389,15 +394,23 @@ export default function Dashboard() {
         /* Owner / Admin / Cashier Cards */
         <div className="grid-4" style={{ marginBottom: '28px' }}>
           <StatCard
-            title="Today's Revenue"
-            value={`$${Number(stats.todayRevenue).toFixed(2)}`}
-            subtitle={`≈ ៛${todayRevenueKhr.toLocaleString()} KHR`}
+            title={t('dashboard.today_revenue', "Today's Revenue")}
+            value={
+              primaryCurrency === 'KHR'
+                ? `${todayRevenueKhr.toLocaleString()} ៛`
+                : `$${Number(stats.todayRevenue).toFixed(2)}`
+            }
+            subtitle={
+              primaryCurrency === 'KHR'
+                ? `≈ $${Number(stats.todayRevenue).toFixed(2)} USD`
+                : `≈ ${todayRevenueKhr.toLocaleString()} ៛ KHR`
+            }
             icon={DollarSign}
             color="#10b981"
           />
 
           <StatCard
-            title="Completed Orders"
+            title={t('dashboard.today_sales', "Completed Orders")}
             value={stats.todaySalesCount}
             subtitle="Processed today"
             icon={ShoppingCart}
@@ -597,8 +610,17 @@ export default function Dashboard() {
                   <th>Date & Time</th>
                   <th>Cashier</th>
                   <th>Status</th>
-                  <th>Grand Total (USD)</th>
-                  <th>Grand Total (KHR)</th>
+                  {primaryCurrency === 'KHR' ? (
+                    <>
+                      <th>{t('dashboard.grand_total_khr', 'Grand Total (KHR)')}</th>
+                      <th>{t('dashboard.grand_total_usd', 'Grand Total (USD)')}</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>{t('dashboard.grand_total_usd', 'Grand Total (USD)')}</th>
+                      <th>{t('dashboard.grand_total_khr', 'Grand Total (KHR)')}</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -628,12 +650,25 @@ export default function Dashboard() {
                           {sale.paymentStatus}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 700 }} className="mono">
-                        ${Number(sale.grandTotal).toFixed(2)}
-                      </td>
-                      <td style={{ color: '#64748b', fontWeight: 600 }} className="mono">
-                        ៛{saleKhr.toLocaleString()}
-                      </td>
+                      {primaryCurrency === 'KHR' ? (
+                        <>
+                          <td style={{ fontWeight: 700, color: '#059669' }} className="mono">
+                            {saleKhr.toLocaleString()} ៛
+                          </td>
+                          <td style={{ color: '#64748b', fontWeight: 600 }} className="mono">
+                            ${Number(sale.grandTotal).toFixed(2)}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ fontWeight: 700, color: '#1e40af' }} className="mono">
+                            ${Number(sale.grandTotal).toFixed(2)}
+                          </td>
+                          <td style={{ color: '#64748b', fontWeight: 600 }} className="mono">
+                            {saleKhr.toLocaleString()} ៛
+                          </td>
+                        </>
+                      )}
                     </tr>
                   );
                 })}

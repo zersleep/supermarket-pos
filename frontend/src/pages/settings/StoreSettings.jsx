@@ -90,6 +90,13 @@ export default function StoreSettings() {
 
     try {
       await api.put('/settings', { settings });
+      if (settings.CURRENCY_CODE) {
+        localStorage.setItem('pos_primary_currency', settings.CURRENCY_CODE);
+      }
+      if (settings.EXCHANGE_RATE_KHR) {
+        localStorage.setItem('pos_exchange_rate', settings.EXCHANGE_RATE_KHR);
+      }
+      window.dispatchEvent(new Event('pos_settings_updated'));
       setSuccess('Store configuration & receipt settings updated successfully.');
     } catch (err) {
       setError(err.message || 'Failed to save settings.');
@@ -684,36 +691,68 @@ export default function StoreSettings() {
                 </div>
               )}
 
-              {/* Grand Total USD */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '1.05rem',
-                  fontWeight: 800,
-                  color: '#0f172a',
-                  borderTop: '1px solid #e2e8f0',
-                  paddingTop: '6px',
-                  marginTop: '4px'
-                }}
-              >
-                <span>TOTAL USD:</span>
-                <span style={{ color: '#2563eb' }}>${sampleTotalUSD.toFixed(2)}</span>
-              </div>
-
-              {/* Grand Total KHR */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.95rem',
-                  fontWeight: 800,
-                  color: '#059669'
-                }}
-              >
-                <span>TOTAL KHR:</span>
-                <span>៛{sampleTotalKHR.toLocaleString()}</span>
-              </div>
+              {/* Grand Total Dual Currency (Respects Primary Currency) */}
+              {settings.CURRENCY_CODE === 'KHR' ? (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '1.1rem',
+                      fontWeight: 800,
+                      color: '#059669',
+                      borderTop: '1px solid #e2e8f0',
+                      paddingTop: '6px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <span>TOTAL KHR:</span>
+                    <span>{sampleTotalKHR.toLocaleString()} ៛</span>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      color: '#2563eb'
+                    }}
+                  >
+                    <span>TOTAL USD:</span>
+                    <span>${sampleTotalUSD.toFixed(2)}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '1.05rem',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      borderTop: '1px solid #e2e8f0',
+                      paddingTop: '6px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <span>TOTAL USD:</span>
+                    <span style={{ color: '#2563eb' }}>${sampleTotalUSD.toFixed(2)}</span>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '0.95rem',
+                      fontWeight: 800,
+                      color: '#059669'
+                    }}
+                  >
+                    <span>TOTAL KHR:</span>
+                    <span>{sampleTotalKHR.toLocaleString()} ៛</span>
+                  </div>
+                </>
+              )}
 
               <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'right' }}>
                 Rate: $1.00 = ៛{parsedRate.toLocaleString()} KHR

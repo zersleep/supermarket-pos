@@ -745,6 +745,8 @@ export default function CashierShifts() {
                   <th>Closed At</th>
                   <th>Opening Float</th>
                   <th>Cash Sales</th>
+                  <th>QR Code Scan</th>
+                  <th>Total Sales</th>
                   <th>Expected Cash</th>
                   <th>Actual Cash</th>
                   <th>Variance</th>
@@ -758,6 +760,9 @@ export default function CashierShifts() {
                   const isBalanced = diff === 0;
                   const isSurplus = diff > 0;
                   const isShortage = diff < 0;
+                  const cashSales = Number(s.cashSalesTotal || 0);
+                  const qrSales = Number(s.qrSalesTotal || s.qrSales || s.qrPaymentTotal || 0);
+                  const totalSales = Number(s.totalSales !== undefined ? s.totalSales : cashSales + qrSales);
 
                   return (
                     <tr key={s.id}>
@@ -768,7 +773,13 @@ export default function CashierShifts() {
                       <td style={{ fontSize: '0.8rem' }}>{s.closedAt ? new Date(s.closedAt).toLocaleString() : '—'}</td>
                       <td className="mono">${Number(s.openingCash).toFixed(2)}</td>
                       <td className="mono" style={{ color: '#10b981', fontWeight: 700 }}>
-                        ${Number(s.cashSalesTotal).toFixed(2)}
+                        ${cashSales.toFixed(2)}
+                      </td>
+                      <td className="mono" style={{ color: '#2563eb', fontWeight: 700 }}>
+                        ${qrSales.toFixed(2)}
+                      </td>
+                      <td className="mono" style={{ fontWeight: 700, color: '#0f172a' }}>
+                        ${totalSales.toFixed(2)}
                       </td>
                       <td className="mono" style={{ fontWeight: 700 }}>
                         ${Number(s.expectedClosingCash).toFixed(2)}

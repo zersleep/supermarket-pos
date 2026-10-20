@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import api from '../api/client';
 
 const PosContext = createContext(null);
 
@@ -21,7 +22,24 @@ export function PosProvider({ children }) {
     }
   });
 
-  const [currency, setCurrency] = useState('USD');
+  // Primary Currency of the store (USD or KHR)
+  const [primaryCurrency, setPrimaryCurrency] = useState(() => {
+    try {
+      return localStorage.getItem('pos_primary_currency') || 'USD';
+    } catch {
+      return 'USD';
+    }
+  });
+
+  // Active payment currency chosen for the current transaction
+  const [currency, setCurrency] = useState(() => {
+    try {
+      return localStorage.getItem('pos_primary_currency') || 'USD';
+    } catch {
+      return 'USD';
+    }
+  });
+
   const [exchangeRate, setExchangeRate] = useState(() => {
     try {
       const saved = localStorage.getItem('pos_exchange_rate');
@@ -30,6 +48,7 @@ export function PosProvider({ children }) {
       return 4100;
     }
   });
+
   const [taxPercent, setTaxPercent] = useState(0);
 
   // Whole cart order-level discount: { type: 'none' | 'percent' | 'fixed', value: number }
@@ -41,6 +60,109 @@ export function PosProvider({ children }) {
       return { type: 'none', value: 0 };
     }
   });
+
+  // Load store settings (CURRENCY_CODE, EXCHANGE_RATE_KHR, TAX_PERCENT) into POS Context
+  const loadStoreSettings = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('pos_token');
+      if (!token) return;
+      const res = await api.get('/settings');
+      if (res.data?.map) {
+        const map = res.data.map;
+        if (map.CURRENCY_CODE) {
+          setPrimaryCurrency(map.CURRENCY_CODE);
+          setCurrency(map.CURRENCY_CODE);
+          try {
+            localStorage.setItem('pos_primary_currency', map.CURRENCY_CODE);
+          } catch {}
+        }
+        if (map.EXCHANGE_RATE_KHR) {
+          const rate = Number(map.EXCHANGE_RATE_KHR);
+          if (!isNaN(rate) && rate > 0) {
+            setExchangeRate(rate);
+            try {
+              localStorage.setItem('pos_exchange_rate', rate.toString());
+            } catch {}
+          }
+        }
+        if (map.TAX_PERCENT) {
+          const tax = Number(map.TAX_PERCENT);
+          if (!isNaN(tax)) {
+            setTaxPercent(tax);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load store settings into POS context:', err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStoreSettings();
+    const handleSettingsUpdated = () => {
+      loadStoreSettings();
+    };
+    window.addEventListener('pos_settings_updated', handleSettingsUpdated);
+    window.addEventListener('storage', handleSettingsUpdated);
+    return () => {
+      window.removeEventListener('pos_settings_updated', handleSettingsUpdated);
+      window.removeEventListener('storage', handleSettingsUpdated);
+    };
+  }, [loadStoreSettings]);
+
+  const updatePrimaryCurrency = async (newCurrency) => {
+    if (newCurrency !== 'USD' && newCurrency !== 'KHR') return;
+    setPrimaryCurrency(newCurrency);
+    setCurrency(newCurrency);
+    try {
+      localStorage.setItem('pos_primary_currency', newCurrency);
+    } catch {}
+
+    // Persist to backend settings if user has permission
+    try {
+      await api.put('/settings', { settings: { CURRENCY_CODE: newCurrency } });
+    } catch (err) {
+      // Non-owner or offline mode will keep local setting intact
+    }
+    window.dispatchEvent(new Event('pos_settings_updated'));
+  };
+
+  const togglePrimaryCurrency = () => {
+    const next = primaryCurrency === 'USD' ? 'KHR' : 'USD';
+    updatePrimaryCurrency(next);
+  };
+
+  /**
+   * Helper: Format any USD amount according to active primary currency or explicit target
+   */
+  const formatAmount = useCallback(
+    (amountUSD, targetCurrency = null) => {
+      const curr = targetCurrency || primaryCurrency;
+      const num = Number(amountUSD) || 0;
+      if (curr === 'KHR') {
+        const khr = Math.round(num * exchangeRate);
+        return `${khr.toLocaleString()} ៛`;
+      }
+      return `$${num.toFixed(2)}`;
+    },
+    [primaryCurrency, exchangeRate]
+  );
+
+  /**
+   * Helper: Return dual prices { primary, secondary, isKhr }
+   */
+  const formatDualPrice = useCallback(
+    (amountUSD) => {
+      const num = Number(amountUSD) || 0;
+      const usdStr = `$${num.toFixed(2)}`;
+      const khrStr = `${Math.round(num * exchangeRate).toLocaleString()} ៛`;
+      if (primaryCurrency === 'KHR') {
+        return { primary: khrStr, secondary: `${usdStr} USD`, isKhr: true };
+      }
+      return { primary: usdStr, secondary: `${khrStr} KHR`, isKhr: false };
+    },
+    [primaryCurrency, exchangeRate]
+  );
 
   // Sync active cart to localStorage
   useEffect(() => {
@@ -282,6 +404,11 @@ export function PosProvider({ children }) {
         discountTotal,
         taxTotal,
         grandTotal,
+        primaryCurrency,
+        setPrimaryCurrency: updatePrimaryCurrency,
+        togglePrimaryCurrency,
+        formatAmount,
+        formatDualPrice,
         currency,
         setCurrency,
         exchangeRate,
@@ -294,7 +421,8 @@ export function PosProvider({ children }) {
         parkedOrders,
         parkCart,
         resumeParkedOrder,
-        deleteParkedOrder
+        deleteParkedOrder,
+        loadStoreSettings
       }}
     >
       {children}

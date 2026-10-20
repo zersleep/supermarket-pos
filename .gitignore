@@ -43,3 +43,6 @@ tmp/
 # Prisma
 backend/prisma/*.db
 backend/prisma/*.db-journal
+
+# Documentation Binaries
+*.pdf

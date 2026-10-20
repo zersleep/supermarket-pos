@@ -3,7 +3,6 @@ import sys
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -40,7 +39,7 @@ class NumberedCanvas(canvas.Canvas):
 
         # Header (pages after cover page)
         if self._pageNumber > 1:
-            self.drawString(54, 750, "Supermarket POS System • Technical Architecture & Database Specification")
+            self.drawString(54, 750, "Supermarket POS System • Technical Architecture, Dual-Currency & SOP Guide")
             self.setStrokeColor(colors.HexColor("#e2e8f0"))
             self.setLineWidth(0.75)
             self.line(54, 744, 558, 744)
@@ -71,8 +70,8 @@ def create_system_documentation_pdf(output_path):
         'CoverTitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=24,
-        leading=30,
+        fontSize=23,
+        leading=28,
         textColor=colors.HexColor('#0f172a'),
         spaceAfter=10
     )
@@ -80,19 +79,19 @@ def create_system_documentation_pdf(output_path):
     subtitle_style = ParagraphStyle(
         'CoverSubtitle',
         parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=12,
-        leading=16,
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        leading=15,
         textColor=colors.HexColor('#2563eb'),
-        spaceAfter=20
+        spaceAfter=15
     )
 
     h1_style = ParagraphStyle(
         'Heading1_Custom',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=16,
-        leading=20,
+        fontSize=15,
+        leading=19,
         textColor=colors.HexColor('#0f172a'),
         spaceBefore=14,
         spaceAfter=8,
@@ -103,8 +102,8 @@ def create_system_documentation_pdf(output_path):
         'Heading2_Custom',
         parent=styles['Heading2'],
         fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=16,
+        fontSize=11,
+        leading=15,
         textColor=colors.HexColor('#1e40af'),
         spaceBefore=10,
         spaceAfter=6,
@@ -115,19 +114,10 @@ def create_system_documentation_pdf(output_path):
         'Body_Custom',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=9,
-        leading=13,
+        fontSize=8.5,
+        leading=12.5,
         textColor=colors.HexColor('#334155'),
         spaceAfter=6
-    )
-
-    code_style = ParagraphStyle(
-        'Code_Custom',
-        parent=styles['Normal'],
-        fontName='Courier',
-        fontSize=8,
-        leading=10,
-        textColor=colors.HexColor('#0f172a')
     )
 
     table_header = ParagraphStyle(
@@ -143,8 +133,8 @@ def create_system_documentation_pdf(output_path):
         'TableCell',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8,
-        leading=11,
+        fontSize=7.8,
+        leading=10.5,
         textColor=colors.HexColor('#1e293b')
     )
 
@@ -153,7 +143,7 @@ def create_system_documentation_pdf(output_path):
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
         fontSize=8,
-        leading=11,
+        leading=10.5,
         textColor=colors.HexColor('#0f172a')
     )
 
@@ -162,128 +152,198 @@ def create_system_documentation_pdf(output_path):
     # ==========================================
     # COVER / HEADER SECTION
     # ==========================================
-    story.append(Spacer(1, 15))
-    story.append(Paragraph("SUPERMARKET POS SYSTEM", subtitle_style))
-    story.append(Paragraph("System Architecture, Database Schema & Operational Workflow Guide", title_style))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#2563eb'), spaceBefore=5, spaceAfter=15))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("SUPERMARKET POS SYSTEM — ENTERPRISE EDITION", subtitle_style))
+    story.append(Paragraph("System Architecture, Dual-Currency Engine, Khmer Localization & 3-Role SOP Manual", title_style))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#2563eb'), spaceBefore=4, spaceAfter=12))
 
     meta_text = (
-        "<b>Document Version:</b> 2.4.0 (Enterprise Production Build)<br/>"
-        "<b>Target Audience:</b> Store Owner, Tech Leads, Cashier Trainers, Database Admins<br/>"
-        "<b>Technology Stack:</b> React 18, Node.js REST API, Prisma ORM, PostgreSQL (Neon Cloud DB)<br/>"
-        "<b>Date Generated:</b> October 2026"
+        "<b>Document Version:</b> 2.5.0 (Enterprise Production Build)<br/>"
+        "<b>Scope:</b> Technical Architecture, Relational Database Schema, Dual-Currency (USD/KHR), Bilingual Engine, Staff SOPs<br/>"
+        "<b>Core Roles Defined:</b> Store Owner, Inventory Manager, Cashier<br/>"
+        "<b>Target Platforms:</b> Web POS, 80mm Thermal Receipt Printers, KHQR Digital Payments, Mobile Telegram Handbooks<br/>"
+        "<b>Updated:</b> October 2026"
     )
     story.append(Paragraph(meta_text, body_style))
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 12))
 
     # ==========================================
-    # SECTION 1: SYSTEM OVERVIEW & THREE ROLES
+    # SECTION 1: SYSTEM OVERVIEW & THE 3 CORE ROLES
     # ==========================================
-    story.append(Paragraph("1. System Overview & The 3 Core Roles", h1_style))
+    story.append(Paragraph("1. Core System Roles & Standard Operating Procedures (SOP)", h1_style))
     story.append(Paragraph(
-        "The Supermarket POS System is specifically tailored for high-volume grocery and supermarket operations. "
-        "It eliminates redundant multi-tier complexity by establishing strictly <b>three clearly differentiated roles</b>. "
-        "The Store Owner serves as the master administrator, removing the ambiguity of separate 'admin' and 'owner' accounts.",
+        "To ensure uncompromising accountability, fast checkout speed, and strict fraud prevention, "
+        "the supermarket operates on <b>strictly three core differentiated roles</b>. "
+        "The Store Owner acts as the chief administrative authority, eliminating redundant intermediate tiers.",
         body_style
     ))
 
     roles_data = [
         [
             Paragraph("System Role", table_header),
-            Paragraph("Target User", table_header),
-            Paragraph("Primary Responsibilities", table_header),
+            Paragraph("Purpose & Profile", table_header),
+            Paragraph("Key Responsibilities", table_header),
             Paragraph("Access Scope & Restrictions", table_header)
         ],
         [
-            Paragraph("<b>OWNER</b><br/>(Store Owner / Executive)", table_cell_bold),
-            Paragraph("Business Owner, General Manager, Store Director", table_cell),
+            Paragraph("<b>1. STORE OWNER</b><br/>(Executive / Admin)", table_cell_bold),
+            Paragraph("System Administrator & Executive.<br/>Full business oversight, profit analytics, store settings, and user access control.", table_cell),
             Paragraph(
-                "• Complete financial control & profit margin monitoring<br/>"
-                "• Store settings, VAT TIN, USD/KHR exchange rates<br/>"
-                "• Staff account creation, credential reset & role assignment<br/>"
-                "• Data backup export (JSON) & disaster recovery<br/>"
-                "• Audit logs & security event investigations",
+                "• Monitor gross profit margins, daily revenue, and discount costs<br/>"
+                "• Configure store details (Name, Phone, Address, VAT TIN)<br/>"
+                "• Set official exchange rates between USD ($) and Cambodian Riel (KHR)<br/>"
+                "• Create and manage staff accounts for Cashiers and Inventory Managers<br/>"
+                "• Export full store database backups (JSON) for disaster recovery<br/>"
+                "• Review security audit logs and financial discrepancies",
                 table_cell
             ),
-            Paragraph("<font color='#16a34a'><b>Full Unrestricted Access:</b></font><br/>All modules, reports, system settings, inventory, cash shifts, and audit logs.", table_cell)
+            Paragraph("<font color='#16a34a'><b>Access Scope:</b></font><br/>Full unrestricted access to all system modules.<br/><br/><font color='#16a34a'><b>Restrictions:</b></font><br/>None.", table_cell)
         ],
         [
-            Paragraph("<b>INVENTORY_MANAGER</b><br/>(Warehouse Lead)", table_cell_bold),
-            Paragraph("Stock Controller, Warehouse Manager, Purchasing Officer", table_cell),
+            Paragraph("<b>2. INVENTORY MANAGER</b><br/>(Stock Specialist)", table_cell_bold),
+            Paragraph("Stock & Warehouse Specialist.<br/>Maintain accurate stock levels, manage suppliers, and prevent product expiration.", table_cell),
             Paragraph(
-                "• Product catalog, SKUs, and barcode configurations<br/>"
-                "• FEFO inventory batch management with shelf expiry dates<br/>"
-                "• Supplier relationships & purchase orders (POs)<br/>"
-                "• Receiving goods, stock adjustments & write-offs",
+                "• Manage product catalog, SKUs, barcode mappings, and categories<br/>"
+                "• Supervise FEFO (First Expired, First Out) batches and shelf expiry<br/>"
+                "• Create Purchase Orders (POs) and record wholesale receipts<br/>"
+                "• Perform stock adjustments and authorize damaged/expired write-offs<br/>"
+                "• Monitor low-stock alerts to maintain optimal inventory levels",
                 table_cell
             ),
-            Paragraph("<font color='#d97706'><b>Restricted Access:</b></font><br/>Products, Stock, Suppliers, POs, and Inventory Reports. Cannot access POS checkout, cashier shifts, or store financial settings.", table_cell)
+            Paragraph("<font color='#d97706'><b>Access Scope:</b></font><br/>Products, Categories, Batches, Suppliers, POs, Goods Receipts, Stock Reports.<br/><br/><font color='#dc2626'><b>Restrictions:</b></font><br/>Cannot operate POS register, open cashier shifts, or view revenue/profit margins.", table_cell)
         ],
         [
-            Paragraph("<b>CASHIER</b><br/>(Frontline Staff)", table_cell_bold),
-            Paragraph("Checkout Cashier, Register Operator, Counter Staff", table_cell),
+            Paragraph("<b>3. CASHIER</b><br/>(Frontline Staff)", table_cell_bold),
+            Paragraph("Customer Checkout & Frontline Staff.<br/>Fast, accurate customer checkout, barcode scanning, and register balancing.", table_cell),
             Paragraph(
-                "• Opening and closing cash register shifts<br/>"
-                "• Barcode scanning & high-speed item search<br/>"
-                "• Applying item discounts and whole-cart promotions<br/>"
-                "• Dual-currency payments in USD Cash and KHR (៛)<br/>"
-                "• Digital KHQR QR-code payment confirmation<br/>"
-                "• Thermal receipt generation & cash in/out drawer tracking",
+                "• Open cashier shifts with an accurate opening cash float<br/>"
+                "• Execute high-speed barcode and camera scanning at checkout<br/>"
+                "• Apply item promotional discounts and cart-wide special pricing<br/>"
+                "• Process dual-currency payments in USD and KHR with auto change<br/>"
+                "• Confirm digital KHQR mobile banking QR-code payments<br/>"
+                "• Print 80mm standard thermal customer receipts<br/>"
+                "• Balance cash drawer upon shift closure (Cash In / Out tracking)",
                 table_cell
             ),
-            Paragraph("<font color='#2563eb'><b>Frontline POS Access Only:</b></font><br/>Checkout terminal, Register Shifts, and Customer Receipts. Cannot modify product prices, edit stock, or see store profit margins.", table_cell)
+            Paragraph("<font color='#2563eb'><b>Access Scope:</b></font><br/>POS Register, Active Register Shifts, Order Cart, Customer Receipts.<br/><br/><font color='#dc2626'><b>Restrictions:</b></font><br/>Cannot modify retail prices, edit stock batches, access supplier POs, or view store settings.", table_cell)
         ]
     ]
 
-    roles_table = Table(roles_data, colWidths=[100, 95, 175, 134])
+    roles_table = Table(roles_data, colWidths=[95, 100, 175, 134])
     roles_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
     ]))
     story.append(roles_table)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
     # ==========================================
-    # SECTION 2: ARCHITECTURE & DATA FLOW
+    # SECTION 2: DUAL-CURRENCY ENGINE & PRIMARY CURRENCY SWITCHING
     # ==========================================
-    story.append(Paragraph("2. Technical Architecture & Technology Stack", h1_style))
+    story.append(Paragraph("2. Dual-Currency Engine (USD & KHR) and Dynamic Currency Switching", h1_style))
     story.append(Paragraph(
-        "The system employs a client-server cloud architecture optimized for low-latency barcode scanning and real-time ledger consistency:",
+        "Supermarkets in Cambodia operate in a dual-currency financial environment where both United States Dollars (USD $) "
+        "and Cambodian Riel (KHR) are exchanged seamlessly. The system incorporates a reactive currency engine with the following guarantees:",
+        body_style
+    ))
+
+    currency_points = (
+        "• <b>Base Normalization:</b> All product cost prices and retail selling prices are stored as high-precision decimals in base USD. "
+        "This maintains consistent accounting ledgers and simplifies vendor purchasing calculations.<br/>"
+        "• <b>Dynamic Primary Currency Switching:</b> Store Owners and Cashiers can toggle the <b>Primary Display Currency</b> between USD and KHR with one click. "
+        "When Primary Currency is set to KHR: product cards, cart line totals, and the checkout grand total display prominently in KHR (e.g. 24,600 KHR) "
+        "with secondary USD subtitles ($6.00 USD). When set to USD, the inverse formatting is displayed.<br/>"
+        "• <b>Configurable Exchange Rate:</b> The Owner defines the official store exchange rate (e.g. 1 USD = 4,100 KHR). "
+        "All checkout calculations, cash tendered inputs, change calculations, and QR amounts automatically sync to this rate.<br/>"
+        "• <b>Multi-Currency Cash Tender & Change Preview:</b> Cashiers can accept cash in USD or KHR. "
+        "The system instantly computes change due in both currencies simultaneously (e.g., Shortage warnings, USD Change, and KHR Change). "
+        "Quick cash chips automatically present relevant denominations ($5, $10, $20, $50, $100 or 10k, 20k, 50k, 100k, 200k KHR).<br/>"
+        "• <b>Bakong KHQR Dual-Currency Integration:</b> Digital QR payments can be generated in either USD or KHR payloads, "
+        "allowing customers to scan with any local mobile banking app."
+    )
+    story.append(Paragraph(currency_points, body_style))
+    story.append(Spacer(1, 10))
+
+    # ==========================================
+    # SECTION 3: KHMER LANGUAGE LOCALIZATION (BILINGUAL FRAMEWORK)
+    # ==========================================
+    story.append(Paragraph("3. Khmer Language Support (ភាសាខ្មែរ) & Internationalization (i18n)", h1_style))
+    story.append(Paragraph(
+        "To ensure all supermarket staff can operate the POS efficiently, the system features a built-in bilingual localization engine "
+        "supporting instantaneous switching between English and Khmer (ភាសាខ្មែរ):",
+        body_style
+    ))
+
+    i18n_table_data = [
+        [Paragraph("Category / Context", table_header), Paragraph("English UI Term", table_header), Paragraph("Khmer Localization (ភាសាខ្មែរ)", table_header), Paragraph("Operational Function", table_header)],
+        [Paragraph("<b>Navigation</b>", table_cell_bold), Paragraph("Checkout Register", table_cell), Paragraph("កន្លែងគិតប្រាក់ (POS)", table_cell), Paragraph("Main frontline barcode scanning terminal", table_cell)],
+        [Paragraph("<b>Navigation</b>", table_cell_bold), Paragraph("Cashier Shifts", table_cell), Paragraph("វេនគិតប្រាក់", table_cell), Paragraph("Opening float & drawer balancing", table_cell)],
+        [Paragraph("<b>Navigation</b>", table_cell_bold), Paragraph("Products Catalog", table_cell), Paragraph("បញ្ជីទំនិញ", table_cell), Paragraph("Catalog items, barcodes, SKUs", table_cell)],
+        [Paragraph("<b>Navigation</b>", table_cell_bold), Paragraph("Store Settings", table_cell), Paragraph("ការកំណត់ហាង", table_cell), Paragraph("Store info, exchange rate, VAT TIN", table_cell)],
+        [Paragraph("<b>POS Actions</b>", table_cell_bold), Paragraph("Grand Total", table_cell), Paragraph("សរុបទាំងអស់", table_cell), Paragraph("Final payable amount after discounts", table_cell)],
+        [Paragraph("<b>POS Actions</b>", table_cell_bold), Paragraph("Tendered Cash", table_cell), Paragraph("ប្រាក់ទទួលពីអតិថិជន", table_cell), Paragraph("Cash entered by cashier", table_cell)],
+        [Paragraph("<b>POS Actions</b>", table_cell_bold), Paragraph("Change Due", table_cell), Paragraph("ប្រាក់អាប់ត្រូវជូន", table_cell), Paragraph("Automatic change returned to customer", table_cell)],
+        [Paragraph("<b>POS Actions</b>", table_cell_bold), Paragraph("Hold Order", table_cell), Paragraph("ផ្អាកការលក់", table_cell), Paragraph("Temporarily parks cart for another customer", table_cell)],
+        [Paragraph("<b>Shift Control</b>", table_cell_bold), Paragraph("Opening Cash Float", table_cell), Paragraph("ប្រាក់ដើមវេន", table_cell), Paragraph("Physical cash placed in drawer at shift start", table_cell)]
+    ]
+
+    i18n_table = Table(i18n_table_data, colWidths=[90, 110, 134, 170])
+    i18n_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#047857')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(i18n_table)
+    story.append(Spacer(1, 10))
+
+    # Page Break for clean Architecture & Database section
+    story.append(PageBreak())
+
+    # ==========================================
+    # SECTION 4: TECHNICAL ARCHITECTURE & STACK
+    # ==========================================
+    story.append(Paragraph("4. Technical Architecture & Technology Stack", h1_style))
+    story.append(Paragraph(
+        "The system utilizes a modern, resilient full-stack architecture tailored for high transaction throughput and zero-latency barcode scanning:",
         body_style
     ))
 
     tech_data = [
-        [Paragraph("Tier", table_header), Paragraph("Technology", table_header), Paragraph("Key Features & Responsibilities", table_header)],
+        [Paragraph("Architecture Layer", table_header), Paragraph("Technology & Framework", table_header), Paragraph("Key Features & Responsibilities", table_header)],
         [
             Paragraph("<b>Frontend Client</b>", table_cell_bold),
             Paragraph("React 18, Vite, Lucide Icons, Plus Jakarta Sans", table_cell),
-            Paragraph("Single Page Application (SPA), touch-friendly POS grid, instant camera barcode scanner, live 80mm thermal receipt preview, responsive layout.", table_cell)
+            Paragraph("High-speed Single Page Application (SPA), touch-optimized POS checkout grid, hardware & camera barcode scanner integration, live thermal receipt preview, and bilingual context.", table_cell)
         ],
         [
             Paragraph("<b>Backend API</b>", table_cell_bold),
             Paragraph("Node.js 20+, Express REST API, Zod Validation", table_cell),
-            Paragraph("Stateless JWT authentication, role authorization middleware, strict input validation, idempotency key checkout protection, audit trail service.", table_cell)
+            Paragraph("Stateless JWT authentication, strict role-based access control (RBAC), idempotency key protection to prevent duplicate checkouts, and security audit log interceptors.", table_cell)
         ],
         [
             Paragraph("<b>Data Access Layer</b>", table_cell_bold),
             Paragraph("Prisma ORM 5.x", table_cell),
-            Paragraph("Type-safe database queries, atomic ACID multi-table transactions for sales checkout and inventory deduction, automated migrations.", table_cell)
+            Paragraph("Type-safe database operations, multi-table atomic transactions ensuring stock deduction and financial sales records commit together without race conditions.", table_cell)
         ],
         [
             Paragraph("<b>Database</b>", table_cell_bold),
             Paragraph("PostgreSQL on Neon Cloud", table_cell),
-            Paragraph("High availability serverless Postgres with SSL encryption, decimal precision money math, foreign key constraints, and performance indexes.", table_cell)
+            Paragraph("Serverless relational PostgreSQL with SSL transport encryption, foreign-key relational integrity, decimal money precision, and automated backups.", table_cell)
         ]
     ]
 
-    tech_table = Table(tech_data, colWidths=[90, 140, 274])
+    tech_table = Table(tech_data, colWidths=[95, 140, 269])
     tech_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
@@ -296,62 +356,53 @@ def create_system_documentation_pdf(output_path):
     story.append(tech_table)
     story.append(Spacer(1, 14))
 
-    # Page Break for clean Database Schema section
-    story.append(PageBreak())
-
     # ==========================================
-    # SECTION 3: DATABASE SCHEMA & ENTITY MODELS
+    # SECTION 5: COMPLETE RELATIONAL DATABASE SCHEMA (20 MODELS)
     # ==========================================
-    story.append(Paragraph("3. Complete Database Schema & Entity Specification", h1_style))
+    story.append(Paragraph("5. Complete Relational Database Schema & Domain Models", h1_style))
     story.append(Paragraph(
-        "The relational database schema consists of 20 interconnected models structured into 6 operational domains. "
-        "Every monetary transaction is audited and inventory batches are managed under strict FEFO (First Expired First Out) rules.",
+        "The relational database schema is structured into 6 clear functional domains comprising 20 interconnected models. "
+        "Strict FEFO (First Expired, First Out) rules and double-entry stock movement tracking are enforced throughout.",
         body_style
     ))
 
     schema_tables = [
-        # Domain 1
-        ("Domain A: Identity, Security & System Settings", [
-            ("User", "id, username, email, passwordHash, fullName, role, isActive, phone, createdAt, updatedAt", "Staff accounts with encrypted passwords (bcrypt) and role assignment (OWNER, INVENTORY_MANAGER, CASHIER)."),
-            ("Setting", "id, key, value, description, updatedAt", "Key-value store for store profile (STORE_NAME, PHONE, ADDRESS), TIN, currency rates, tax %, and thresholds."),
-            ("AuditLog", "id, userId, action, entityType, entityId, details (JSON), ipAddress, userAgent, createdAt", "Immutable tamper-evident security audit log tracking user creations, price updates, stock write-offs, and logins.")
+        ("Domain A: Identity, Security & Business Settings", [
+            ("User", "id, username, email, passwordHash, fullName, role (OWNER, INVENTORY_MANAGER, CASHIER), isActive, phone, createdAt, updatedAt", "Staff accounts with bcrypt hashed passwords and role authorization."),
+            ("Setting", "id, key, value, description, updatedAt", "Store identity (NAME, PHONE, ADDRESS), VAT TIN, primary currency code, USD/KHR exchange rate, tax %, and warning days."),
+            ("AuditLog", "id, userId, action, entityType, entityId, details (JSON), ipAddress, userAgent, createdAt", "Immutable tamper-proof log recording user creations, price updates, write-offs, settings changes, and logins.")
         ]),
-        # Domain 2
-        ("Domain B: Product Catalog & Suppliers", [
-            ("Category", "id, name, description, createdAt, updatedAt", "Hierarchical classification of supermarket merchandise (Beverages, Dairy, Produce, etc.)."),
-            ("Supplier", "id, name, contactPerson, phone, email, address, notes, createdAt, updatedAt", "Vendor directory with lead time tracking and contact details for procurement."),
-            ("Product", "id, name, sku, barcode, description, categoryId, costPrice, sellingPrice, unit, reorderLevel, trackExpiry, imageUrl, isActive", "Central product catalog. Tracks selling price, cost price, reorder thresholds, and camera-scannable EAN/UPC barcodes.")
+        ("Domain B: Product Catalog & Category Taxonomy", [
+            ("Category", "id, name, description, createdAt, updatedAt", "Taxonomic categorization of merchandise (Produce, Beverages, Snacks, Dairy, etc.)."),
+            ("Supplier", "id, name, contactPerson, phone, email, address, notes, createdAt, updatedAt", "Wholesale vendor directory with procurement history and lead times."),
+            ("Product", "id, name, sku, barcode, description, categoryId, costPrice, sellingPrice, unit, reorderLevel, trackExpiry, imageUrl, isActive", "Master item catalog tracking unit prices, barcodes, reorder thresholds, and active status.")
         ]),
-        # Domain 3
         ("Domain C: Inventory, FEFO Batches & Stock Movements", [
-            ("InventoryBatch", "id, batchNumber, productId, initialQuantity, currentQuantity, costPrice, receivedAt, expiryDate, isWriteOff", "Heart of FEFO inventory. Tracks individual physical shipments with their distinct expiration dates and cost bases."),
-            ("StockMovement", "id, productId, batchId, movementType, quantity, previousStock, newStock, reason, referenceId, createdAt", "Double-entry inventory audit ledger recording receipts, sales, shrinkage, adjustments, and customer returns.")
+            ("InventoryBatch", "id, batchNumber, productId, initialQuantity, currentQuantity, costPrice, receivedAt, expiryDate, isWriteOff", "Heart of FEFO inventory. Tracks individual shipments with specific manufacturing/expiration dates and wholesale cost."),
+            ("StockMovement", "id, productId, batchId, movementType (RECEIPT, SALE, ADJUSTMENT, WRITE_OFF, RETURN), quantity, previousStock, newStock, reason, referenceId, createdAt", "Double-entry inventory audit ledger recording all physical stock changes.")
         ]),
-        # Domain 4
         ("Domain D: Purchasing & Goods Receipt", [
-            ("PurchaseOrder", "id, poNumber, supplierId, status (DRAFT, SUBMITTED, APPROVED, FULLY_RECEIVED), orderDate, expectedDate, totalCost", "Commercial purchase orders issued to suppliers for wholesale merchandise replenishment."),
-            ("PurchaseOrderItem", "id, poId, productId, quantityOrdered, quantityReceived, unitCost, lineTotal", "Line item details specifying contracted unit wholesale prices and quantities ordered."),
-            ("GoodsReceipt", "id, receiptNumber, poId, receivedByUserId, receivedAt, notes", "Official warehouse delivery receiving record with staff sign-off."),
-            ("GoodsReceiptItem", "id, receiptId, poItemId, productId, batchId, quantityReceived, unitCost, lineTotal", "Links physical delivered quantities directly to newly instantiated InventoryBatches.")
+            ("PurchaseOrder", "id, poNumber, supplierId, status (DRAFT, SUBMITTED, APPROVED, FULLY_RECEIVED), orderDate, expectedDate, totalCost", "Replenishment purchase orders dispatched to commercial suppliers."),
+            ("PurchaseOrderItem", "id, poId, productId, quantityOrdered, quantityReceived, unitCost, lineTotal", "Individual line items with wholesale unit pricing and order quantities."),
+            ("GoodsReceipt", "id, receiptNumber, poId, receivedByUserId, receivedAt, notes", "Official warehouse delivery receiving document with supervisor sign-off."),
+            ("GoodsReceiptItem", "id, receiptId, poItemId, productId, batchId, quantityReceived, unitCost, lineTotal", "Directly binds delivered inventory units into newly created InventoryBatches.")
         ]),
-        # Domain 5
         ("Domain E: Cash Register Shifts & Cash Movements", [
-            ("CashierShift", "id, cashierId, openedAt, closedAt, status (OPEN, CLOSED), openingCash, cashSalesTotal, cashInTotal, cashOutTotal, expectedClosingCash, actualClosingCash, difference", "Audited cashier shifts tracking opening cash float, daily cash drawer receipts, and end-of-day cash reconciliation variances."),
-            ("CashMovement", "id, shiftId, userId, type (CASH_IN, CASH_OUT), amount, reason, createdAt", "Authorized cash drawer insertions (change addition) and removals (bank drops, petty cash expenses).")
+            ("CashierShift", "id, cashierId, openedAt, closedAt, status (OPEN, CLOSED), openingCash, cashSalesTotal, cashInTotal, cashOutTotal, expectedClosingCash, actualClosingCash, difference", "Audited cashier register shifts tracking opening cash float, total cash collected, and closing physical count variances."),
+            ("CashMovement", "id, shiftId, userId, type (CASH_IN, CASH_OUT), amount, reason, createdAt", "Authorized cash drawer insertions (change addition) and removals (bank drops, petty expenses).")
         ]),
-        # Domain 6
         ("Domain F: POS Sales, Discounts, Payments & Refunds", [
-            ("Sale", "id, saleNumber, receiptNumber, cashierId, shiftId, customerId, subtotal, discountTotal, taxTotal, grandTotal, paymentStatus, idempotencyKey", "Primary transaction record. Encapsulates item discounts, special order promotions, VAT calculation, and unique idempotency keys."),
-            ("SaleItem", "id, saleId, productId, batchId, quantity, unitPriceSnapshot, costPriceSnapshot, productNameSnapshot, discountAmount, lineTotal", "Immutable snapshot of sold items capturing exact unit prices, cost of goods, promotional discounts, and deducted inventory batches."),
-            ("Payment", "id, saleId, method (CASH, QR_PAYMENT), currency (USD, KHR), amount, exchangeRate, amountInUSD, reference, status", "Payment records handling USD cash, Cambodian Riel (KHR), and digital KHQR payments with converted USD equivalents."),
-            ("Refund / RefundItem", "id, refundNumber, saleId, totalRefundAmount, reason, processedByUserId / saleItemId, quantity, refundAmount, restock", "Customer refund audit trail supporting item restock decisions into batches and cashier drawer adjustments.")
+            ("Sale", "id, saleNumber, receiptNumber, cashierId, shiftId, customerId, subtotal, discountTotal, taxTotal, grandTotal, paymentStatus, idempotencyKey", "Primary transaction record capturing cart items, promotional discounts, tax, and unique idempotency token."),
+            ("SaleItem", "id, saleId, productId, batchId, quantity, unitPriceSnapshot, costPriceSnapshot, productNameSnapshot, discountAmount, lineTotal", "Immutable snapshot of sold items recording exact unit prices, cost of goods, and deducted inventory batches."),
+            ("Payment", "id, saleId, method (CASH, QR_PAYMENT), currency (USD, KHR), amount, exchangeRate, transactionRef, cashReceived, changeGiven, status", "Records tender details for USD Cash, KHR Cash, or Bakong KHQR digital QR scans."),
+            ("Refund / RefundItem", "id, refundNumber, saleId, totalRefundAmount, reason, processedByUserId / saleItemId, quantity, refundAmount, restock", "Audit trail for customer returns with restock decisions and drawer balancing.")
         ])
     ]
 
     for domain_title, tables in schema_tables:
         story.append(Paragraph(domain_title, h2_style))
         table_rows = [
-            [Paragraph("Table / Model", table_header), Paragraph("Key Fields & Types", table_header), Paragraph("Business Purpose", table_header)]
+            [Paragraph("Table / Model", table_header), Paragraph("Key Fields & Schema Types", table_header), Paragraph("Business Purpose & Rules", table_header)]
         ]
         for tname, fields, desc in tables:
             table_rows.append([
@@ -371,99 +422,120 @@ def create_system_documentation_pdf(output_path):
             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
         ]))
         story.append(dom_table)
-        story.append(Spacer(1, 8))
+        story.append(Spacer(1, 6))
 
     # Page Break for Workflows
     story.append(PageBreak())
 
     # ==========================================
-    # SECTION 4: STEP-BY-STEP WORKFLOWS
+    # SECTION 6: OPERATIONAL WORKFLOWS
     # ==========================================
-    story.append(Paragraph("4. Operational Workflows & Business Logic", h1_style))
+    story.append(Paragraph("6. Operational Workflows & Business Logic", h1_style))
     story.append(Paragraph(
-        "The system automates critical supermarket business operations, minimizing cashier error and eliminating inventory shrinkage:",
+        "The system coordinates real-time supermarket activities across front-of-house checkout and back-of-house warehousing:",
         body_style
     ))
 
     # Workflow 1
-    story.append(Paragraph("Workflow A: POS Checkout, FEFO Batch Deduction & Accounting", h2_style))
+    story.append(Paragraph("Workflow A: POS Checkout, FEFO Batch Deduction & Thermal Receipt", h2_style))
     story.append(Paragraph(
-        "<b>Step 1 — Shift Validation:</b> The cashier must have an active <code>OPEN</code> shift with a recorded cash float before checkouts can begin.<br/>"
-        "<b>Step 2 — Item Entry:</b> Cashier scans item barcode via scanner/camera or searches name/SKU. System loads current retail price and checks batch stock.<br/>"
-        "<b>Step 3 — Promotional Discounts:</b> Item-level discounts (e.g. promo tag) or whole-order special sale discounts ($ or %) are applied. Discounts are recorded into <code>discountTotal</code>.<br/>"
-        "<b>Step 4 — Dual-Currency Calculation:</b> Subtotal and tax are calculated. Grand total is computed in USD and converted to Cambodian Riel (KHR) at the live configured rate (e.g. 4,100 KHR).<br/>"
-        "<b>Step 5 — Payment Execution:</b> Customer pays via Cash (USD/KHR with automatic change computation) or KHQR digital bank scan.<br/>"
-        "<b>Step 6 — Atomic FEFO Stock Deduction:</b> In a Prisma atomic transaction, inventory is decremented from the oldest active <code>InventoryBatch</code> (earliest expiry date). A <code>StockMovement</code> record of type <code>SALE</code> is written.<br/>"
-        "<b>Step 7 — Receipt Printing:</b> An 80mm thermal receipt prints with Store Name, Phone, Address, VAT TIN, item lines, promotional savings, and return policy.",
+        "<b>Step 1 — Shift Authorization:</b> The cashier opens a register shift with physical opening cash float (USD or KHR).<br/>"
+        "<b>Step 2 — Barcode Item Scan:</b> Cashier scans item barcodes or inputs SKU. System queries active batch stock and prevents overselling.<br/>"
+        "<b>Step 3 — Promotional Pricing:</b> Item promotions (e.g., $0.50 off) or whole-cart order discounts ($ or %) are applied.<br/>"
+        "<b>Step 4 — Dual-Currency Calculation:</b> Grand total is computed in primary currency with instant live exchange rate conversion to secondary currency.<br/>"
+        "<b>Step 5 — Payment & Tender:</b> Cashier selects Cash (USD or KHR with dual change preview) or KHQR digital bank scan.<br/>"
+        "<b>Step 6 — Atomic FEFO Deduction:</b> In a Prisma atomic transaction, stock is deducted from the oldest active <code>InventoryBatch</code> (earliest expiry date). A <code>StockMovement</code> record is created.<br/>"
+        "<b>Step 7 — Receipt Issuance:</b> 80mm thermal receipt prints with bilingual store branding, TIN, item breakdown, and dual totals.",
         body_style
     ))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     # Workflow 2
     story.append(Paragraph("Workflow B: Purchasing, Goods Receipt & FEFO Ingestion", h2_style))
     story.append(Paragraph(
-        "<b>Step 1 — Reorder Trigger:</b> Products whose total quantity across all batches drops below <code>reorderLevel</code> trigger a reorder alert on the dashboard.<br/>"
-        "<b>Step 2 — Purchase Order (PO):</b> Inventory Manager creates a PO with the chosen supplier, specifying quantity and negotiated unit cost.<br/>"
-        "<b>Step 3 — Goods Delivery & Inspection:</b> Upon physical arrival, warehouse staff verifies package condition and item counts against the PO.<br/>"
-        "<b>Step 4 — Batch Ingestion:</b> A <code>GoodsReceipt</code> is logged. For each product, a new <code>InventoryBatch</code> is created containing <code>batchNumber</code>, <code>costPrice</code>, and <code>expiryDate</code>.<br/>"
-        "<b>Step 5 — Stock Ledger Update:</b> A <code>StockMovement</code> of type <code>RECEIPT</code> is automatically committed, increasing store inventory asset valuation.",
+        "<b>Step 1 — Reorder Warning:</b> Automated telemetry highlights items falling below <code>reorderLevel</code>.<br/>"
+        "<b>Step 2 — Purchase Order (PO):</b> Inventory Manager creates a PO with the preferred supplier with negotiated wholesale cost.<br/>"
+        "<b>Step 3 — Receiving Delivery:</b> Delivery is inspected. A <code>GoodsReceipt</code> is created linking delivered counts to a new <code>InventoryBatch</code>.<br/>"
+        "<b>Step 4 — Asset Valuation:</b> Double-entry <code>StockMovement</code> records log incoming assets, updating total store stock valuation.",
         body_style
     ))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     # Workflow 3
     story.append(Paragraph("Workflow C: Cashier Shift Reconciliation & Anti-Theft Balancing", h2_style))
     story.append(Paragraph(
-        "<b>Step 1 — Register Opening:</b> Cashier inputs starting cash float (e.g. $100.00). Shift status changes to <code>OPEN</code>.<br/>"
-        "<b>Step 2 — Shift Operations:</b> During the shift, all cash sales automatically increment <code>cashSalesTotal</code>. Any petty cash expense or cash drop is recorded via <code>CashMovement</code>.<br/>"
-        "<b>Step 3 — Shift Closure:</b> Cashier counts physical cash in drawer and enters the actual amount.<br/>"
-        "<b>Step 4 — Variance Calculation:</b> System computes: <code>Expected = Opening + CashSales + CashIn - CashOut</code>. The mathematical difference (Over / Short) is permanently recorded for owner audit.",
+        "<b>Step 1 — Shift Activity:</b> During the shift, all cash sales automatically increment <code>cashSalesTotal</code>.<br/>"
+        "<b>Step 2 — Shift Closure:</b> Cashier counts drawer cash and enters the physical count.<br/>"
+        "<b>Step 3 — Variance Computation:</b> The system computes: <code>Expected = OpeningFloat + CashSales + CashIn - CashOut</code>.<br/>"
+        "<b>Step 4 — Audit Record:</b> Mathematical discrepancy (Over / Short) is permanently saved for executive audit by the Store Owner.",
         body_style
     ))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
     # ==========================================
-    # SECTION 5: OWNER EXECUTIVE CHECKLIST & COPYABLE SUMMARY
+    # SECTION 7: TELEGRAM-READY STAFF MANUAL & SOP QUICK CARD
     # ==========================================
-    story.append(Paragraph("5. Copy-Ready Staff Training & Role Summary", h1_style))
+    story.append(Paragraph("7. Mobile & Telegram-Ready Staff Manual Quick Card", h1_style))
     story.append(Paragraph(
-        "Below is a clean, structured summary ready to be copied into store standard operating procedure (SOP) manuals or employee onboarding handbooks:",
+        "The following clean, structured summary can be forwarded directly via Telegram or printed for staff onboarding handbooks:",
         body_style
     ))
 
-    summary_box_text = (
-        "<b>SUPERMARKET POS ROLES AT A GLANCE:</b><br/><br/>"
+    telegram_sop_text = (
+        "<b>🛒 SUPERMARKET POS SYSTEM — CORE ROLES & SOP</b><br/><br/>"
         "<b>1. STORE OWNER (System Administrator & Executive)</b><br/>"
-        "• Purpose: Full business oversight, profit analytics, store settings, and staff access.<br/>"
-        "• Can Access: Everything in system. Exclusively manages Store Name, Phone, Address, VAT TIN, Exchange Rates (USD/KHR), Staff Accounts, Data Backups, and Gross Profit Reports.<br/>"
-        "• Cannot Do: No restrictions.<br/><br/>"
-        "<b>2. INVENTORY MANAGER (Warehouse & Procurement Specialist)</b><br/>"
-        "• Purpose: Maintains healthy stock levels, stops shelf expiration, and manages suppliers.<br/>"
-        "• Can Access: Products, Categories, Stock Batches (FEFO), Expiry Warnings, Suppliers, Purchase Orders, Goods Receipts, and Stock Valuations.<br/>"
-        "• Cannot Do: Cannot operate the POS checkout register, open cash shifts, or view store revenue/profit margins.<br/><br/>"
-        "<b>3. CASHIER (Customer Checkout & Register Operator)</b><br/>"
-        "• Purpose: Serves supermarket customers quickly, scans barcodes, collects payments, and balances the cash drawer.<br/>"
-        "• Can Access: Cashier Shifts (Open/Close), POS Checkout Register, Barcode Scanning, Promotional Discounts, USD/KHR Cash, KHQR QR-code payments, and Customer Thermal Receipts.<br/>"
-        "• Cannot Do: Cannot change product prices, edit supplier information, adjust inventory stocks, or view business settings."
+        "<b>Purpose:</b> Full business oversight, profit analytics, store settings, and user access control.<br/>"
+        "<b>Key Responsibilities:</b><br/>"
+        "• Monitor gross profit margins, daily revenue, and promotional discount costs.<br/>"
+        "• Configure store details (Name, Phone, Address, VAT TIN).<br/>"
+        "• Set official exchange rates between USD ($) and Cambodian Riel (KHR ៛).<br/>"
+        "• Create and manage staff accounts for Cashiers and Inventory Managers.<br/>"
+        "• Export full store database backups (JSON) for disaster recovery and audits.<br/>"
+        "• Review security audit logs and financial discrepancies.<br/>"
+        "<b>Access Scope:</b> Full unrestricted access to all system modules.<br/>"
+        "<b>Restrictions:</b> None.<br/><br/>"
+        "<b>2. INVENTORY MANAGER (Stock & Warehouse Specialist)</b><br/>"
+        "<b>Purpose:</b> Maintain accurate stock levels, manage suppliers, and prevent product expiration.<br/>"
+        "<b>Key Responsibilities:</b><br/>"
+        "• Manage the product catalog, SKUs, barcode mappings, and categories.<br/>"
+        "• Supervise FEFO (First Expired, First Out) inventory batches and expiration dates.<br/>"
+        "• Create Purchase Orders (POs) and record wholesale goods delivery receipts.<br/>"
+        "• Perform stock adjustments and authorize damaged/expired write-offs.<br/>"
+        "• Monitor low-stock alerts to maintain optimal inventory levels.<br/>"
+        "<b>Access Scope:</b> Products, Categories, Stock Batches, Suppliers, POs, Goods Receipts, and Stock Reports.<br/>"
+        "<b>Restrictions:</b> Cannot operate the POS checkout register, open cashier shifts, or view business revenue/profit margins.<br/><br/>"
+        "<b>3. CASHIER (Customer Checkout & Frontline Staff)</b><br/>"
+        "<b>Purpose:</b> Fast, accurate customer checkout, barcode scanning, and register balancing.<br/>"
+        "<b>Key Responsibilities:</b><br/>"
+        "• Open cashier shifts with an accurate opening cash float.<br/>"
+        "• Execute high-speed barcode and camera scanning at checkout.<br/>"
+        "• Apply item-level promotional discounts and cart-wide special pricing.<br/>"
+        "• Process dual-currency payments in USD and KHR (៛) with automatic change calculation.<br/>"
+        "• Confirm digital KHQR mobile banking QR-code payments.<br/>"
+        "• Print 80mm standard thermal customer receipts.<br/>"
+        "• Balance the cash drawer upon shift closure (Cash In / Cash Out tracking).<br/>"
+        "<b>Access Scope:</b> POS Checkout Register, Active Register Shifts, Order Cart, and Customer Receipts.<br/>"
+        "<b>Restrictions:</b> Cannot modify retail prices, edit stock batches, access supplier POs, or view store settings."
     )
 
-    summary_table = Table([[Paragraph(summary_box_text, body_style)]], colWidths=[504])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#eff6ff')),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#93c5fd')),
+    sop_table = Table([[Paragraph(telegram_sop_text, body_style)]], colWidths=[504])
+    sop_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f0fdf4')),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#86efac')),
         ('TOPPADDING', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
         ('LEFTPADDING', (0, 0), (-1, -1), 12),
         ('RIGHTPADDING', (0, 0), (-1, -1), 12),
     ]))
-    story.append(summary_table)
+    story.append(sop_table)
 
     # Build Document
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"[PDF Generator] Successfully generated: {output_path}")
 
 if __name__ == '__main__':
-    target = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Supermarket_POS_System_Architecture_and_Database_Guide.pdf")
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target = os.path.join(project_root, "Supermarket_POS_System_Architecture_and_Database_Guide.pdf")
     if len(sys.argv) > 1:
         target = sys.argv[1]
     create_system_documentation_pdf(target)

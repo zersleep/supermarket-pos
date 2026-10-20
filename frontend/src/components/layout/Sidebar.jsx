@@ -9,15 +9,13 @@ import {
   FileText,
   Clock,
   History,
-  QrCode,
   BarChart3,
   Users,
   ShieldAlert,
-  Settings,
-  ShoppingBag,
-  Sparkles
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function Sidebar() {
   const {
@@ -30,32 +28,34 @@ export default function Sidebar() {
     canManageSettings
   } = useAuth();
 
+  const { t } = useLanguage();
+
   const sections = [
     {
-      title: 'Operations',
+      title: t('nav.operations', 'Operations'),
       items: [
-        { label: 'Dashboard', path: '/', icon: LayoutDashboard, show: true },
-        { label: 'Checkout Register', path: '/pos', icon: ShoppingCart, show: canOperatePos },
-        { label: 'Cashier Shifts', path: '/shifts', icon: Clock, show: canOperatePos },
-        { label: 'Sales History', path: '/sales', icon: History, show: true }
+        { label: t('nav.dashboard', 'Dashboard'), path: '/', icon: LayoutDashboard, show: true },
+        { label: t('nav.pos', 'Checkout Register'), path: '/pos', icon: ShoppingCart, show: canOperatePos },
+        { label: t('nav.shifts', 'Cashier Shifts'), path: '/shifts', icon: Clock, show: canOperatePos },
+        { label: t('nav.sales', 'Sales History'), path: '/sales', icon: History, show: true }
       ]
     },
     {
-      title: 'Inventory & Supply',
+      title: t('nav.inventory_supply', 'Inventory & Supply'),
       items: [
-        { label: 'Products Catalog', path: '/products', icon: Package, show: canManageProducts },
-        { label: 'Inventory & Batches', path: '/inventory', icon: Boxes, show: canManageInventory },
-        { label: 'Suppliers', path: '/suppliers', icon: Truck, show: canManageInventory },
-        { label: 'Purchase Orders', path: '/purchasing', icon: FileText, show: canManageInventory }
+        { label: t('nav.products', 'Products Catalog'), path: '/products', icon: Package, show: canManageProducts },
+        { label: t('nav.inventory', 'Inventory & Batches'), path: '/inventory', icon: Boxes, show: canManageInventory },
+        { label: t('nav.suppliers', 'Suppliers'), path: '/suppliers', icon: Truck, show: canManageInventory },
+        { label: t('nav.purchasing', 'Purchase Orders'), path: '/purchasing', icon: FileText, show: canManageInventory }
       ]
     },
     {
-      title: 'Administration',
+      title: t('nav.administration', 'Administration'),
       items: [
-        { label: 'Reports & Analytics', path: '/reports', icon: BarChart3, show: canViewReports },
-        { label: 'User Accounts', path: '/users', icon: Users, show: canManageUsers },
-        { label: 'Audit Trail', path: '/audit', icon: ShieldAlert, show: canViewAuditLogs },
-        { label: 'Store Settings', path: '/settings', icon: Settings, show: canManageSettings }
+        { label: t('nav.reports', 'Reports & Analytics'), path: '/reports', icon: BarChart3, show: canViewReports },
+        { label: t('nav.users', 'Staff & Roles'), path: '/users', icon: Users, show: canManageUsers },
+        { label: t('nav.audit', 'Audit Trail'), path: '/audit', icon: ShieldAlert, show: canViewAuditLogs },
+        { label: t('nav.settings', 'Store Settings'), path: '/settings', icon: Settings, show: canManageSettings }
       ]
     }
   ];
@@ -68,8 +68,8 @@ export default function Sidebar() {
           <ShoppingCart size={22} />
         </div>
         <div className="sidebar-brand-text">
-          <div className="sidebar-title">Supermarket POS</div>
-          <div className="sidebar-subtitle">Retail & Inventory</div>
+          <div className="sidebar-title">{t('brand.title', 'Supermarket POS')}</div>
+          <div className="sidebar-subtitle">{t('brand.subtitle', 'Retail & Inventory')}</div>
         </div>
       </div>
 
@@ -108,9 +108,9 @@ export default function Sidebar() {
         <div className="sidebar-status-pill">
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span className="sidebar-status-dot" />
-            <span>Cloud Sync Active</span>
+            <span>Neon DB Connected</span>
           </div>
-          <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>v1.2</span>
+          <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>v2.4</span>
         </div>
       </div>
     </aside>
