@@ -550,6 +550,9 @@ export default function PosCheckout() {
         setReceiptOpen(true);
         clearCart();
         setCashReceived('');
+        try {
+          window.dispatchEvent(new Event('pos_sale_completed'));
+        } catch {}
       }
 
       // Refresh product stock list in background
@@ -600,6 +603,9 @@ export default function PosCheckout() {
         setReceiptOpen(true);
         clearCart();
         setQrScanStatus('WAITING');
+        try {
+          window.dispatchEvent(new Event('pos_sale_completed'));
+        } catch {}
       }, 1300);
     } catch (err) {
       console.warn('QR auto-confirm fallback:', err);
@@ -611,6 +617,9 @@ export default function PosCheckout() {
         setReceiptOpen(true);
         clearCart();
         setQrScanStatus('WAITING');
+        try {
+          window.dispatchEvent(new Event('pos_sale_completed'));
+        } catch {}
       }, 1300);
     }
   };
@@ -684,7 +693,7 @@ export default function PosCheckout() {
       </div>
 
       {/* Main POS Interface (Left: Catalog, Right: Cart) */}
-      <div style={{ display: 'flex', gap: '20px', minHeight: '600px', height: 'calc(100vh - 165px)' }}>
+      <div style={{ display: 'flex', gap: '20px', minHeight: '600px', height: 'calc(100vh - 145px)', maxHeight: 'calc(100vh - 145px)' }}>
         {/* LEFT PANEL: Catalog, Barcode Scanner, & Category Filters */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'hidden' }}>
           
@@ -1130,12 +1139,14 @@ export default function PosCheckout() {
             width: '430px',
             display: 'flex',
             flexDirection: 'column',
-            padding: '16px',
+            padding: '14px',
             backgroundColor: '#ffffff',
             boxShadow: 'var(--shadow-md)',
             borderRadius: 'var(--radius-xl)',
             border: '1.5px solid #e2e8f0',
-            overflow: 'hidden'
+            overflowY: 'auto',
+            maxHeight: '100%',
+            position: 'relative'
           }}
         >
           {/* Cart Header with Parked Orders Badge & Compact Exchange Rate */}
@@ -1238,11 +1249,12 @@ export default function PosCheckout() {
           <div
             style={{
               flex: '1 1 auto',
-              minHeight: '160px',
+              minHeight: '90px',
+              maxHeight: '260px',
               overflowY: 'auto',
               borderTop: '1px solid #f1f5f9',
               borderBottom: '1px solid #f1f5f9',
-              padding: '8px 0',
+              padding: '6px 0',
               display: 'flex',
               flexDirection: 'column',
               gap: '6px'
@@ -1708,19 +1720,30 @@ export default function PosCheckout() {
             </div>
           )}
 
-          {/* Checkout Button */}
-          <button
-            className="btn btn-success btn-lg"
-            style={{ width: '100%', padding: '12px', fontSize: '1rem', fontWeight: 800 }}
-            disabled={cart.length === 0 || checkoutLoading || (paymentMethod === 'CASH' && !isCashSufficient)}
-            onClick={handleCheckout}
+          {/* Checkout Button - Sticky Bottom Anchored */}
+          <div
+            style={{
+              marginTop: 'auto',
+              paddingTop: '8px',
+              position: 'sticky',
+              bottom: 0,
+              backgroundColor: '#ffffff',
+              zIndex: 5
+            }}
           >
-            {checkoutLoading
-              ? t('common.loading', 'Processing Sale...')
-              : paymentMethod === 'CASH'
-                ? `⚡ ${t('pos.complete_payment', 'Complete Cash Sale')} [F8]`
-                : `📱 ${t('pos.khqr', 'Generate Scan QR')} [F9]`}
-          </button>
+            <button
+              className="btn btn-success btn-lg"
+              style={{ width: '100%', padding: '12px', fontSize: '1rem', fontWeight: 800 }}
+              disabled={cart.length === 0 || checkoutLoading || (paymentMethod === 'CASH' && !isCashSufficient)}
+              onClick={handleCheckout}
+            >
+              {checkoutLoading
+                ? t('common.loading', 'Processing Sale...')
+                : paymentMethod === 'CASH'
+                  ? `⚡ ${t('pos.complete_payment', 'Complete Cash Sale')} [F8]`
+                  : `📱 ${t('pos.khqr', 'Generate Scan QR')} [F9]`}
+            </button>
+          </div>
         </div>
       </div>
 

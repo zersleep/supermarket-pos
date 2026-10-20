@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { usePos } from '../../context/PosContext';
 import { LoadingSpinner, Alert, StatCard } from '../../components/common/LoadingSpinner';
 import ReceiptModal from '../../components/receipt/ReceiptModal';
 import Modal from '../../components/common/Modal';
@@ -39,28 +40,56 @@ export default function SalesHistory() {
 
   const { isOwner, isAdmin } = useAuth();
   const canRefund = isOwner || isAdmin;
+  const { exchangeRate, primaryCurrency } = usePos();
+  const effectiveRate = Number(exchangeRate) || 4100;
 
   // Aggregate KPI Calculations
   const completedSales = sales.filter(
     (s) => s.paymentStatus === 'COMPLETED' || s.paymentStatus === 'PARTIALLY_REFUNDED'
   );
+
+  // Total gross sales across all completed sales in base USD
   const totalUsdVolume = completedSales.reduce(
-    (acc, s) => acc + (s.currency === 'USD' ? Number(s.totalAmount) : 0),
+    (acc, s) => acc + Number(s.grandTotal || s.totalAmount || 0),
     0
   );
-  const totalKhrVolume = completedSales.reduce(
-    (acc, s) => acc + (s.currency === 'KHR' ? Number(s.totalAmount) : 0),
-    0
+
+  // Separate volume by actual payment tender currency
+  let tenderUsdVolume = 0;
+  let tenderKhrVolume = 0;
+  let tenderKhrCount = 0;
+  let tenderUsdCount = 0;
+
+  completedSales.forEach((s) => {
+    const primaryPayment = s.payments?.[0];
+    const saleCurrency = primaryPayment?.currency || s.currency || 'USD';
+    const amount = Number(s.grandTotal || s.totalAmount || 0);
+
+    if (saleCurrency === 'KHR') {
+      tenderKhrVolume += Math.round(amount * effectiveRate);
+      tenderKhrCount += 1;
+    } else {
+      tenderUsdVolume += amount;
+      tenderUsdCount += 1;
+    }
+  });
+
+  // KHR Gross Sales: if sales specifically tendered in KHR exist, display that tender total; otherwise show converted total KHR revenue
+  const totalKhrVolume = tenderKhrCount > 0 ? tenderKhrVolume : Math.round(totalUsdVolume * effectiveRate);
+
+  const refundedSales = sales.filter(
+    (s) =>
+      s.paymentStatus === 'REFUNDED' ||
+      s.paymentStatus === 'PARTIALLY_REFUNDED' ||
+      (s._count?.refunds && Number(s._count.refunds) > 0)
   );
-  const refundedCount = sales.filter(
-    (s) => s.paymentStatus === 'REFUNDED' || s.paymentStatus === 'PARTIALLY_REFUNDED'
-  ).length;
+  const refundedCount = refundedSales.length;
 
   const fetchSales = async (query = search) => {
     try {
       setLoading(true);
       setError('');
-      let url = `/sales?search=${encodeURIComponent(query)}&status=${statusFilter}`;
+      let url = `/sales?limit=100&search=${encodeURIComponent(query)}&status=${statusFilter}`;
       if (startDate) url += `&startDate=${startDate}`;
       if (endDate) url += `&endDate=${endDate}`;
 
@@ -79,6 +108,21 @@ export default function SalesHistory() {
       fetchSales(search);
     }, 280);
     return () => clearTimeout(timer);
+  }, [search, statusFilter, startDate, endDate]);
+
+  // Real-time listener: refresh automatically when a cashier completes a sale in POS or when window regains focus
+  useEffect(() => {
+    const handleSaleEvent = () => {
+      fetchSales(search);
+    };
+    window.addEventListener('pos_sale_completed', handleSaleEvent);
+    window.addEventListener('pos_settings_updated', handleSaleEvent);
+    window.addEventListener('focus', handleSaleEvent);
+    return () => {
+      window.removeEventListener('pos_sale_completed', handleSaleEvent);
+      window.removeEventListener('pos_settings_updated', handleSaleEvent);
+      window.removeEventListener('focus', handleSaleEvent);
+    };
   }, [search, statusFilter, startDate, endDate]);
 
   const handleClearSearch = () => {
@@ -201,21 +245,21 @@ export default function SalesHistory() {
         <StatCard
           title="USD Gross Sales"
           value={`$${totalUsdVolume.toFixed(2)}`}
-          subtitle="Processed in US Dollars"
+          subtitle={tenderUsdCount > 0 ? `${tenderUsdCount} paid in USD` : 'Total gross in USD'}
           icon={DollarSign}
           color="#10b981"
         />
         <StatCard
           title="KHR Gross Sales"
           value={`${totalKhrVolume.toLocaleString()} ៛`}
-          subtitle="Processed in Khmer Riel"
+          subtitle={tenderKhrCount > 0 ? `${tenderKhrCount} paid in KHR` : `Rate: 1 USD = ${effectiveRate.toLocaleString()} ៛`}
           icon={CheckCircle2}
           color="#8b5cf6"
         />
         <StatCard
           title="Refunds & Returns"
           value={refundedCount}
-          subtitle={refundedCount > 0 ? 'Audited customer returns' : 'Zero returned transactions'}
+          subtitle={refundedCount > 0 ? `${refundedCount} returned transactions` : 'Zero returned transactions'}
           icon={RotateCcw}
           color={refundedCount > 0 ? '#ef4444' : '#10b981'}
         />
@@ -332,7 +376,7 @@ export default function SalesHistory() {
                   <th>Cashier</th>
                   <th>Payment Method</th>
                   <th>Status</th>
-                  <th>Total (USD)</th>
+                  <th>Total Amount</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -361,7 +405,10 @@ export default function SalesHistory() {
                       </span>
                     </td>
                     <td style={{ fontWeight: 700 }} className="mono">
-                      ${Number(sale.grandTotal).toFixed(2)}
+                      <div>${Number(sale.grandTotal).toFixed(2)}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                        {Math.round(Number(sale.grandTotal) * effectiveRate).toLocaleString()} ៛
+                      </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
