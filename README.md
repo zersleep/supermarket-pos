@@ -220,7 +220,6 @@ Or run them individually in separate terminals:
 | Role | POS & Checkout | Shifts & Cash | Products & Batches | PO & Receiving | Reports & Profit | User Admin | System Settings |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **OWNER** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **ADMIN** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **INVENTORY_MANAGER** | ❌ | ❌ | ✅ | ✅ | ✅ (Stock) | ❌ | ❌ |
 | **CASHIER** | ✅ | ✅ (Own) | ❌ | ❌ | ❌ | ❌ | ❌ |
 
