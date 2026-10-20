@@ -90,7 +90,7 @@ export function AuthProvider({ children }) {
     return roles.includes(user.role);
   };
 
-  const isOwner = user?.role === 'OWNER';
+  const isOwner = user?.role === 'OWNER' || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN';
   const isCashier = user?.role === 'CASHIER';
   const isInventoryManager = user?.role === 'INVENTORY_MANAGER';

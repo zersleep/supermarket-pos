@@ -46,6 +46,11 @@ async function getUsers(req, res, next) {
           role: true,
           isActive: true,
           createdAt: true,
+          shifts: {
+            where: { status: 'OPEN' },
+            select: { id: true, openedAt: true, openingCash: true },
+            take: 1
+          },
           _count: {
             select: { sales: true, shifts: true }
           }

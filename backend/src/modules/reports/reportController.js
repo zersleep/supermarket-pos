@@ -53,11 +53,13 @@ async function getSalesReport(req, res, next) {
 
     let totalRevenue = 0;
     let totalCostOfGoods = 0;
+    let totalDiscountsGiven = 0;
     const paymentMethods = { CASH: 0, QR_PAYMENT: 0 };
     const cashierSalesMap = {};
 
     for (const sale of completedSales) {
       totalRevenue = roundToTwo(totalRevenue + Number(sale.grandTotal));
+      totalDiscountsGiven = roundToTwo(totalDiscountsGiven + Number(sale.discountTotal || 0));
 
       // Calculate cost of goods sold from recorded historical costPriceSnapshots
       for (const item of sale.items) {
@@ -83,6 +85,7 @@ async function getSalesReport(req, res, next) {
 
     const netRevenue = roundToTwo(totalRevenue - totalRefundAmount);
     const estimatedGrossProfit = roundToTwo(netRevenue - totalCostOfGoods);
+    const grossMarginPercent = netRevenue > 0 ? roundToTwo((estimatedGrossProfit / netRevenue) * 100) : 0;
 
     // 3. Top selling products in range
     const topProducts = await prisma.saleItem.groupBy({
@@ -112,14 +115,17 @@ async function getSalesReport(req, res, next) {
         totalRevenue,
         totalRefundAmount,
         netRevenue,
+        totalDiscountsGiven,
         totalCostOfGoods,
-        estimatedGrossProfit
+        estimatedGrossProfit,
+        grossMarginPercent
       },
       paymentMethods,
       cashierPerformance: Object.entries(cashierSalesMap).map(([name, data]) => ({
         cashier: name,
         salesCount: data.count,
-        totalSales: data.total
+        totalSales: data.total,
+        averageTicket: data.count > 0 ? roundToTwo(data.total / data.count) : 0
       })),
       topSellingProducts: topProducts.map(p => ({
         name: p.productNameSnapshot,

@@ -10,6 +10,6 @@ router.use(authenticateToken);
 router.get('/', settingController.getSettings);
 
 // Only Owner can modify store settings
-router.put('/', requireRoles(ROLES.OWNER), settingController.updateSettings);
+router.put('/', requireRoles(ROLES.OWNER, ROLES.ADMIN), settingController.updateSettings);
 
 module.exports = router;

@@ -7,7 +7,12 @@ import {
   TrendingUp,
   CreditCard,
   Package,
-  Users
+  Users,
+  Percent,
+  Tag,
+  ShoppingBag,
+  Award,
+  ArrowUpRight
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -90,8 +95,7 @@ export default function Reports() {
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('pos_token');
     const url = `${apiBase}/reports/export-sales-csv?startDate=${startDate}&endDate=${endDate}`;
-    
-    // Create an authenticated blob download
+
     fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`
@@ -113,23 +117,46 @@ export default function Reports() {
   const summary = salesReport.summary || {};
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+    <div style={{ paddingBottom: '30px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Analytics & Financial Reports</h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
-            Calculated from real database records (Gross profit, sales by cashier, CSV export)
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: 0 }}>
+              Analytics & Financial Reports
+            </h1>
+            <span
+              style={{
+                backgroundColor: '#eff6ff',
+                color: '#2563eb',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '4px 10px',
+                borderRadius: '8px',
+                border: '1px solid #bfdbfe'
+              }}
+            >
+              Executive Insights
+            </span>
+          </div>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '4px' }}>
+            Accurate profit margins, promotional discounts given, cashier performance, and inventory health
           </p>
         </div>
-        <button onClick={handleExportCsv} className="btn btn-outline">
-          <Download size={16} /> Export CSV
+
+        <button
+          onClick={handleExportCsv}
+          className="btn btn-outline"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <Download size={16} color="#2563eb" /> Export Sales CSV
         </button>
       </div>
 
       <Alert type="danger" message={error} onClose={() => setError('')} />
 
       {/* Date Controls */}
-      <div className="card" style={{ padding: '14px 20px', marginBottom: '20px' }}>
+      <div className="card" style={{ padding: '14px 20px', marginBottom: '22px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -164,7 +191,7 @@ export default function Reports() {
                 setStartDate(e.target.value);
               }}
             />
-            <span>to</span>
+            <span style={{ color: '#64748b', fontSize: '0.85rem' }}>to</span>
             <input
               type="date"
               className="form-input"
@@ -180,35 +207,28 @@ export default function Reports() {
       </div>
 
       {loading ? (
-        <LoadingSpinner text="Computing financial reports..." />
+        <LoadingSpinner text="Computing store financial reports..." />
       ) : (
         <>
-          {/* Key Financial Metrics */}
-          <div className="grid-4" style={{ marginBottom: '24px' }}>
+          {/* Key Executive Financial Metrics Grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '16px',
+              marginBottom: '24px'
+            }}
+          >
+            {/* Net Revenue */}
             <StatCard
-              title="Total Revenue"
-              value={`$${Number(summary.totalRevenue || 0).toFixed(2)}`}
-              subtitle={`${summary.completedSalesCount || 0} completed transactions`}
+              title="Net Revenue"
+              value={`$${Number(summary.netRevenue || 0).toFixed(2)}`}
+              subtitle={`Gross: $${Number(summary.totalRevenue || 0).toFixed(2)} (${summary.completedSalesCount || 0} sales)`}
               icon={DollarSign}
               color="#2563eb"
             />
 
-            <StatCard
-              title="Total Refunds"
-              value={`$${Number(summary.totalRefundAmount || 0).toFixed(2)}`}
-              subtitle="Returns & refunds processed"
-              icon={TrendingUp}
-              color="#ef4444"
-            />
-
-            <StatCard
-              title="Net Revenue"
-              value={`$${Number(summary.netRevenue || 0).toFixed(2)}`}
-              subtitle="Total Revenue minus Refunds"
-              icon={DollarSign}
-              color="#10b981"
-            />
-
+            {/* Est. Gross Profit */}
             <StatCard
               title="Est. Gross Profit"
               value={`$${Number(summary.estimatedGrossProfit || 0).toFixed(2)}`}
@@ -216,31 +236,92 @@ export default function Reports() {
               icon={TrendingUp}
               color="#059669"
             />
+
+            {/* Profit Margin % */}
+            <StatCard
+              title="Gross Profit Margin"
+              value={`${Number(summary.grossMarginPercent || 0).toFixed(1)}%`}
+              subtitle="Profit margin on net sales"
+              icon={Percent}
+              color="#7c3aed"
+            />
+
+            {/* Discounts Given */}
+            <StatCard
+              title="Discounts Granted"
+              value={`$${Number(summary.totalDiscountsGiven || 0).toFixed(2)}`}
+              subtitle="Promotions & item deals saved"
+              icon={Tag}
+              color="#d97706"
+            />
+
+            {/* Total Refunds */}
+            <StatCard
+              title="Total Refunds"
+              value={`$${Number(summary.totalRefundAmount || 0).toFixed(2)}`}
+              subtitle="Returns & refunds processed"
+              icon={ArrowUpRight}
+              color="#ef4444"
+            />
           </div>
 
+          {/* Middle Row: Payment Methods & Inventory Health */}
           <div className="grid-2" style={{ marginBottom: '24px' }}>
             {/* Payment Methods Breakdown */}
             <div className="card">
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px' }}>
-                Payment Method Breakdown
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <DollarSign color="#10b981" size={18} />
-                    <span style={{ fontWeight: 500 }}>Cash Payments</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <CreditCard size={18} color="#2563eb" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                  Payment Method Breakdown
+                </h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <DollarSign size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#0f172a' }}>Cash Payments</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>USD Cash & KHR Riel at register</div>
+                    </div>
                   </div>
-                  <span className="mono" style={{ fontWeight: 700 }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>
                     ${Number(salesReport.paymentMethods?.CASH || 0).toFixed(2)}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CreditCard color="#3b82f6" size={18} />
-                    <span style={{ fontWeight: 500 }}>Scan QR Payments</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CreditCard size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#0f172a' }}>KHQR Digital Payments</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Mobile banking QR transactions</div>
+                    </div>
                   </div>
-                  <span className="mono" style={{ fontWeight: 700 }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#2563eb' }}>
                     ${Number(salesReport.paymentMethods?.QR_PAYMENT || 0).toFixed(2)}
                   </span>
                 </div>
@@ -249,25 +330,28 @@ export default function Reports() {
 
             {/* Inventory Valuation */}
             <div className="card">
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px' }}>
-                Current Inventory Valuation
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Total Stocked Units:</span>
-                  <span className="mono" style={{ fontWeight: 600 }}>
-                    {inventoryReport.totalUnits || 0}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <Package size={18} color="#10b981" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                  Current Inventory Valuation
+                </h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Total Active Stock Units:</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                    {inventoryReport.totalUnits || 0} units
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Inventory Asset Value (at cost):</span>
-                  <span className="mono" style={{ fontWeight: 700 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Inventory Asset Cost:</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>
                     ${Number(inventoryReport.totalInventoryValue || 0).toFixed(2)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Potential Retail Value:</span>
-                  <span className="mono" style={{ fontWeight: 700, color: '#2563eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Potential Retail Value:</span>
+                  <span style={{ fontWeight: 800, color: '#2563eb', fontSize: '1.05rem' }}>
                     ${Number(inventoryReport.totalRetailValue || 0).toFixed(2)}
                   </span>
                 </div>
@@ -275,11 +359,62 @@ export default function Reports() {
             </div>
           </div>
 
+          {/* Cashier Performance Leaderboard */}
+          <div className="card" style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <Award size={18} color="#f59e0b" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                Cashier Performance & Register Activity
+              </h3>
+            </div>
+
+            {salesReport.cashierPerformance?.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                No cashier transactions logged for this period.
+              </div>
+            ) : (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cashier Name</th>
+                      <th>Transactions Completed</th>
+                      <th>Total Sales Volume</th>
+                      <th>Avg. Ticket Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesReport.cashierPerformance?.map((cp, idx) => (
+                      <tr key={idx}>
+                        <td style={{ fontWeight: 700, color: '#0f172a' }}>
+                          {cp.cashier}
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 600 }}>{cp.salesCount}</span> tickets
+                        </td>
+                        <td style={{ fontWeight: 700, color: '#2563eb' }}>
+                          ${Number(cp.totalSales || 0).toFixed(2)}
+                        </td>
+                        <td style={{ fontWeight: 600, color: '#059669' }}>
+                          ${Number(cp.averageTicket || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {/* Top Selling Products */}
           <div className="card">
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px' }}>
-              Top Selling Products in Period
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <BarChart3 size={18} color="#2563eb" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                Top Selling Products in Selected Period
+              </h3>
+            </div>
+
             {salesReport.topSellingProducts?.length === 0 ? (
               <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
                 No product sales recorded in this date range.
@@ -291,15 +426,15 @@ export default function Reports() {
                     <tr>
                       <th>Product Name</th>
                       <th>Units Sold</th>
-                      <th>Total Sales Volume ($)</th>
+                      <th>Total Sales Revenue ($)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {salesReport.topSellingProducts?.map((item, idx) => (
                       <tr key={idx}>
-                        <td style={{ fontWeight: 600 }}>{item.name}</td>
-                        <td className="mono">{item.totalQuantity}</td>
-                        <td className="mono" style={{ fontWeight: 700 }}>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
+                        <td style={{ fontWeight: 600 }}>{item.totalQuantity} units</td>
+                        <td style={{ fontWeight: 700, color: '#2563eb' }}>
                           ${Number(item.totalSales).toFixed(2)}
                         </td>
                       </tr>

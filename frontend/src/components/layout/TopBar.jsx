@@ -23,9 +23,8 @@ export default function TopBar() {
   const getRoleBadgeClass = (role) => {
     switch (role) {
       case 'OWNER':
-        return 'badge-danger';
       case 'ADMIN':
-        return 'badge-primary';
+        return 'badge-danger';
       case 'INVENTORY_MANAGER':
         return 'badge-warning';
       default:
@@ -138,7 +137,7 @@ export default function TopBar() {
               {user?.fullName || user?.username}
             </div>
             <span className={`badge ${getRoleBadgeClass(user?.role)}`} style={{ fontSize: '0.65rem' }}>
-              {user?.role?.replace('_', ' ')}
+              {(user?.role === 'ADMIN' ? 'OWNER' : user?.role)?.replace('_', ' ')}
             </span>
           </div>
         </div>
