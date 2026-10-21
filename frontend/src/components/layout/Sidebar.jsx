@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
+  Folder,
   Boxes,
   Truck,
   FileText,

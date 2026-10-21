@@ -1,7 +1,7 @@
 const prisma = require('../../config/db');
 const { sendSuccess, sendPaginated, sendError } = require('../../utils/response');
 const { recordAuditLog } = require('../../services/auditService');
-const { stockAdjustmentSchema, addStockSchema, writeOffSchema } = require('../../validators');
+const { stockAdjustmentSchema, addStockSchema, writeOffSchema, updateBatchSchema } = require('../../validators');
 
 /**
  * Get inventory summary and alerts
@@ -507,11 +507,68 @@ async function writeOffBatch(req, res, next) {
   }
 }
 
+/**
+ * Update an existing inventory batch (e.g. set/correct expiry date, lot number, cost price)
+ */
+async function updateBatch(req, res, next) {
+  try {
+    const { id } = req.params;
+    const data = updateBatchSchema.parse(req.body);
+
+    const batch = await prisma.inventoryBatch.findUnique({
+      where: { id },
+      include: {
+        product: { select: { id: true, name: true, sku: true, unit: true } }
+      }
+    });
+
+    if (!batch) {
+      return sendError(res, 'Inventory batch not found.', 404);
+    }
+
+    const updatedBatch = await prisma.inventoryBatch.update({
+      where: { id },
+      data: {
+        ...(data.expiryDate !== undefined && {
+          expiryDate: data.expiryDate && data.expiryDate.trim() !== '' ? new Date(data.expiryDate) : null
+        }),
+        ...(data.batchNumber && { batchNumber: data.batchNumber.trim() }),
+        ...(data.costPrice !== undefined && { costPrice: Number(data.costPrice) })
+      },
+      include: {
+        product: { select: { id: true, name: true, sku: true, unit: true } }
+      }
+    });
+
+    await recordAuditLog({
+      userId: req.user.id,
+      action: 'BATCH_UPDATE',
+      entityType: 'InventoryBatch',
+      entityId: batch.id,
+      details: {
+        productName: batch.product.name,
+        oldExpiryDate: batch.expiryDate,
+        newExpiryDate: updatedBatch.expiryDate,
+        oldBatchNumber: batch.batchNumber,
+        newBatchNumber: updatedBatch.batchNumber,
+        oldCostPrice: batch.costPrice,
+        newCostPrice: updatedBatch.costPrice
+      },
+      req
+    });
+
+    return sendSuccess(res, updatedBatch, 'Batch updated successfully.');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getInventorySummary,
   getBatches,
   getStockMovements,
   adjustStock,
   addStock,
-  writeOffBatch
+  writeOffBatch,
+  updateBatch
 };

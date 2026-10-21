@@ -1016,15 +1016,32 @@ export default function ProductList() {
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>Batch Expiry Date</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                  />
-                  <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
-                    Expiration date for the opening batch.
-                  </span>
+                  {formData.trackExpiry ? (
+                    <>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={formData.expiryDate}
+                        onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                      />
+                      <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                        Expiration date for perishable goods.
+                      </span>
+                    </>
+                  ) : (
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        backgroundColor: '#f1f5f9',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        fontSize: '0.8rem',
+                        color: '#64748b'
+                      }}
+                    >
+                      Durable / Non-perishable product (no expiry date needed)
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1034,30 +1051,38 @@ export default function ProductList() {
           <div
             style={{
               display: 'flex',
-              gap: '24px',
-              padding: '12px 16px',
+              flexDirection: 'column',
+              gap: '10px',
+              padding: '14px 16px',
               backgroundColor: '#f1f5f9',
               borderRadius: '10px',
               marginBottom: '20px'
             }}
           >
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={formData.trackExpiry}
-                onChange={(e) => setFormData({ ...formData, trackExpiry: e.target.checked })}
-              />
-              Track Expiration Dates (FEFO - First-Expired, First-Out)
-            </label>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.trackExpiry}
+                  onChange={(e) => setFormData({ ...formData, trackExpiry: e.target.checked })}
+                />
+                Track Expiration Dates (Perishable Good / FEFO Allocation)
+              </label>
+              <span style={{ fontSize: '0.725rem', color: '#64748b', marginLeft: '24px', display: 'block', marginTop: '2px' }}>
+                Check for food, drinks, dairy, and items that spoil. Uncheck for non-perishable goods (utensils, soap, paper, appliances) so no expiration alarms fire.
+              </span>
+            </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              />
-              Active (Ready to sell at Cashier POS)
-            </label>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                />
+                Active (Ready to sell at Cashier POS)
+              </label>
+            </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '6px' }}>

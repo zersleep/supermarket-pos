@@ -17,7 +17,8 @@ import {
   Package,
   Tag,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  CalendarClock
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -75,6 +76,15 @@ export default function InventorySummary() {
   const [writeOffQuantity, setWriteOffQuantity] = useState('');
   const [writeOffReason, setWriteOffReason] = useState('');
   const [writeOffType, setWriteOffType] = useState('WRITE_OFF_EXPIRED');
+
+  // Edit Batch Modal State
+  const [editBatchModalOpen, setEditBatchModalOpen] = useState(false);
+  const [editBatchTarget, setEditBatchTarget] = useState(null);
+  const [editBatchForm, setEditBatchForm] = useState({
+    batchNumber: '',
+    expiryDate: '',
+    costPrice: ''
+  });
 
   const [actionLoading, setActionLoading] = useState(false);
   const { canManageInventory } = useAuth();
@@ -291,6 +301,40 @@ export default function InventorySummary() {
       loadData();
     } catch (err) {
       alert(err.message || 'Write-off failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openEditBatchModal = (batch) => {
+    setEditBatchTarget(batch);
+    setEditBatchForm({
+      batchNumber: batch.batchNumber,
+      expiryDate: batch.expiryDate ? new Date(batch.expiryDate).toISOString().split('T')[0] : '',
+      costPrice: Number(batch.costPrice || 0)
+    });
+    setEditBatchModalOpen(true);
+  };
+
+  const handleEditBatchSubmit = async (e) => {
+    e.preventDefault();
+    if (!editBatchForm.batchNumber.trim()) {
+      alert('Batch number cannot be empty.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await api.put(`/inventory/batches/${editBatchTarget.id}`, {
+        batchNumber: editBatchForm.batchNumber.trim(),
+        expiryDate: editBatchForm.expiryDate || '', // empty string clears the expiry date on the backend
+        costPrice: Number(editBatchForm.costPrice) || 0
+      });
+      setSuccess(`Batch ${editBatchForm.batchNumber} updated successfully.`);
+      setEditBatchModalOpen(false);
+      loadData();
+    } catch (err) {
+      alert(err.message || 'Failed to update batch.');
     } finally {
       setActionLoading(false);
     }
@@ -656,6 +700,14 @@ export default function InventorySummary() {
                                   title="Quick stock adjustment (recount variance)"
                                 >
                                   Adjust
+                                </button>
+                                <button
+                                  className="btn btn-outline btn-sm"
+                                  onClick={() => openEditBatchModal(b)}
+                                  title="Edit batch expiration date, lot number, or wholesale cost"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <CalendarClock size={13} /> Edit
                                 </button>
                                 <button
                                   className="btn btn-outline btn-sm"
@@ -1881,6 +1933,153 @@ export default function InventorySummary() {
             >
               <PlusCircle size={16} />
               {actionLoading ? 'Adding Stock...' : `Confirm & Add ${addStockQtyNumber || 0} Units`}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 4: EDIT BATCH & EXPIRATION CONTROL */}
+      <Modal
+        isOpen={editBatchModalOpen}
+        onClose={() => setEditBatchModalOpen(false)}
+        title="Edit Inventory Batch"
+        maxWidth="640px"
+      >
+        <form onSubmit={handleEditBatchSubmit}>
+          {/* Information / Non-perishable banner */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '0.85rem',
+              color: '#334155'
+            }}
+          >
+            <CalendarClock size={22} color="#2563eb" style={{ flexShrink: 0 }} />
+            <div>
+              Correct batch lot numbers, wholesale costs, or expiration dates. For <strong>non-perishable goods</strong> (household items, soap, utensils), leave or clear the expiration date so no expiry alarms trigger.
+            </div>
+          </div>
+
+          {/* Selected Batch Product Card */}
+          {editBatchTarget && (
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+            >
+              <img
+                src={getProductImageUrl(editBatchTarget.product)}
+                alt={editBatchTarget.product?.name}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '8px',
+                  objectFit: 'cover',
+                  border: '1px solid #cbd5e1'
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
+                  {editBatchTarget.product?.name}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                  SKU: <span className="mono">{editBatchTarget.product?.sku}</span> • Current Batch Units:{' '}
+                  <strong>{Number(editBatchTarget.currentQuantity)} {editBatchTarget.product?.unit}s</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Batch Number */}
+          <div className="form-group" style={{ marginBottom: '14px' }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Batch / Lot Identifier *</label>
+            <input
+              type="text"
+              required
+              className="form-input mono"
+              value={editBatchForm.batchNumber}
+              onChange={(e) => setEditBatchForm({ ...editBatchForm, batchNumber: e.target.value })}
+              placeholder="e.g. BAT-2026-001"
+            />
+          </div>
+
+          {/* Expiration Date with Clear button for non-perishable items */}
+          <div className="form-group" style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>Expiration Date</label>
+              {editBatchForm.expiryDate && (
+                <button
+                  type="button"
+                  onClick={() => setEditBatchForm({ ...editBatchForm, expiryDate: '' })}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#dc2626',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  ✕ Clear Date (Non-Perishable Item)
+                </button>
+              )}
+            </div>
+            <input
+              type="date"
+              className="form-input"
+              value={editBatchForm.expiryDate}
+              onChange={(e) => setEditBatchForm({ ...editBatchForm, expiryDate: e.target.value })}
+            />
+            <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+              {editBatchForm.expiryDate
+                ? 'Monitored under First-Expired-First-Out (FEFO) automated sales allocation.'
+                : 'No expiration date set. Classified as durable / non-perishable (no alerts will fire).'}
+            </span>
+          </div>
+
+          {/* Wholesale Cost Price */}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Wholesale Cost Price ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="form-input mono"
+              value={editBatchForm.costPrice}
+              onChange={(e) => setEditBatchForm({ ...editBatchForm, costPrice: e.target.value })}
+              placeholder="0.00"
+            />
+            <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+              Purchase valuation cost per unit for this specific batch.
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button type="button" className="btn btn-outline" onClick={() => setEditBatchModalOpen(false)}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={actionLoading || !editBatchForm.batchNumber.trim()}
+              style={{ minWidth: '150px' }}
+            >
+              {actionLoading ? 'Saving...' : 'Save Batch Changes'}
             </button>
           </div>
         </form>

@@ -5,7 +5,8 @@ const {
   loginSchema,
   checkoutSchema,
   createRefundSchema,
-  addStockSchema
+  addStockSchema,
+  updateBatchSchema
 } = require('../src/validators');
 
 describe('Input Validation & Security Schemas Tests', () => {
@@ -98,5 +99,23 @@ describe('Input Validation & Security Schemas Tests', () => {
     assert.equal(valid.quantity, 50);
     assert.equal(valid.movementType, 'RECEIPT');
     assert.equal(valid.costPrice, 2.75);
+  });
+
+  test('updateBatchSchema allows updating or clearing expiry date and batch lot', () => {
+    // Valid update with new date
+    const withDate = updateBatchSchema.parse({
+      expiryDate: '2027-12-31',
+      batchNumber: 'LOT-CORRECTED-12',
+      costPrice: 3.50
+    });
+    assert.equal(withDate.expiryDate, '2027-12-31');
+    assert.equal(withDate.batchNumber, 'LOT-CORRECTED-12');
+
+    // Valid clearing of expiry date (for non-perishable goods)
+    const cleared = updateBatchSchema.parse({
+      expiryDate: '',
+      batchNumber: 'NON-PERISHABLE-01'
+    });
+    assert.equal(cleared.expiryDate, '');
   });
 });

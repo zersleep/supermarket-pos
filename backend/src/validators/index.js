@@ -94,6 +94,12 @@ const writeOffSchema = z.object({
   reason: z.string().min(3, 'Reason is required')
 });
 
+const updateBatchSchema = z.object({
+  expiryDate: z.string().optional().or(z.literal('')).nullable(),
+  batchNumber: z.string().min(1, 'Batch number cannot be empty').max(100).optional(),
+  costPrice: z.number().min(0, 'Cost price cannot be negative').optional()
+});
+
 // Suppliers
 const supplierSchema = z.object({
   name: z.string().min(2).max(100),
@@ -202,6 +208,7 @@ module.exports = {
   stockAdjustmentSchema,
   addStockSchema,
   writeOffSchema,
+  updateBatchSchema,
   supplierSchema,
   purchaseOrderSchema,
   goodsReceiptSchema,
