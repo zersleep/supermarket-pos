@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Folder } from 'lucide-react';
+import { Plus, Edit, Folder, Trash2 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner, Alert } from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
+import Confirmation from '../../components/common/Confirmation';
 
 export default function CategoryList() {
   const [categories, setCategories] = useState([]);
@@ -16,6 +17,10 @@ export default function CategoryList() {
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '', isActive: true });
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Delete Confirmation State
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   const { canManageProducts } = useAuth();
 
@@ -77,6 +82,27 @@ export default function CategoryList() {
     }
   };
 
+  const handleDeleteClick = (cat) => {
+    setCategoryToDelete(cat);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return;
+    setActionLoading(true);
+    try {
+      await api.delete(`/categories/${categoryToDelete.id}`);
+      setSuccess(`Category "${categoryToDelete.name}" deleted.`);
+      setDeleteConfirmOpen(false);
+      setCategoryToDelete(null);
+      fetchCategories();
+    } catch (err) {
+      alert(err.message || 'Failed to delete category.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -96,7 +122,7 @@ export default function CategoryList() {
       <Alert type="danger" message={error} onClose={() => setError('')} />
       <Alert type="success" message={success} onClose={() => setSuccess('')} />
 
-      <div className="card">
+      <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
         {loading ? (
           <LoadingSpinner text="Loading categories..." />
         ) : categories.length === 0 ? (
@@ -104,7 +130,7 @@ export default function CategoryList() {
             No categories created yet.
           </div>
         ) : (
-          <div className="table-container">
+          <div className="table-container" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
             <table>
               <thead>
                 <tr>
@@ -128,9 +154,19 @@ export default function CategoryList() {
                     </td>
                     {canManageProducts && (
                       <td style={{ textAlign: 'right' }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEditModal(c)}>
-                          <Edit size={14} /> Edit
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <button className="btn btn-outline btn-sm" onClick={() => openEditModal(c)}>
+                            <Edit size={14} /> Edit
+                          </button>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                            onClick={() => handleDeleteClick(c)}
+                            title="Delete category"
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -179,6 +215,29 @@ export default function CategoryList() {
           </div>
         </form>
       </Modal>
+
+      <Confirmation
+        isOpen={deleteConfirmOpen}
+        title="Delete Category"
+        message={
+          categoryToDelete
+            ? `Are you sure you want to delete category "${categoryToDelete.name}"? ${
+                categoryToDelete._count?.products > 0
+                  ? `Its ${categoryToDelete._count.products} product(s) will become uncategorized.`
+                  : 'This action cannot be undone.'
+              }`
+            : 'Are you sure you want to delete this category?'
+        }
+        confirmText={actionLoading ? 'Deleting...' : 'Delete'}
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (!actionLoading) {
+            setDeleteConfirmOpen(false);
+            setCategoryToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -99,8 +99,59 @@ async function updateCategory(req, res, next) {
   }
 }
 
+/**
+ * Delete a category
+ */
+async function deleteCategory(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { products: true }
+        }
+      }
+    });
+
+    if (!category) {
+      return sendError(res, 'Category not found.', 404);
+    }
+
+    // Safely unassign any linked products to null before removing category
+    if (category._count.products > 0) {
+      await prisma.product.updateMany({
+        where: { categoryId: id },
+        data: { categoryId: null }
+      });
+    }
+
+    await prisma.category.delete({
+      where: { id }
+    });
+
+    await recordAuditLog({
+      userId: req.user.id,
+      action: 'CATEGORY_DELETE',
+      entityType: 'Category',
+      entityId: id,
+      details: {
+        name: category.name,
+        unassignedProductsCount: category._count.products
+      },
+      req
+    });
+
+    return sendSuccess(res, null, `Category "${category.name}" deleted successfully.`);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getCategories,
   createCategory,
-  updateCategory
+  updateCategory,
+  deleteCategory
 };

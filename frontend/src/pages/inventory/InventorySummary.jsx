@@ -596,7 +596,7 @@ export default function InventorySummary() {
           </div>
 
           {/* Batches Table */}
-          <div className="card">
+          <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
             {loading ? (
               <LoadingSpinner text="Loading inventory batches..." />
             ) : filteredBatches.length === 0 ? (
@@ -621,18 +621,18 @@ export default function InventorySummary() {
                 )}
               </div>
             ) : (
-              <div className="table-container">
+              <div className="table-container" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
                 <table>
                   <thead>
                     <tr>
-                      <th>Product</th>
-                      <th>Batch #</th>
-                      <th>Quantity Available</th>
-                      <th>Unit Cost</th>
-                      <th>Received Date</th>
-                      <th>Expiry Date</th>
-                      <th>Status (FEFO)</th>
-                      {canManageInventory && <th style={{ textAlign: 'right' }}>Actions</th>}
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Product</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Batch #</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Quantity Available</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Unit Cost</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Received Date</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Expiry Date</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Status (FEFO)</th>
+                      {canManageInventory && <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: '0.725rem', minWidth: '260px' }}>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -640,15 +640,15 @@ export default function InventorySummary() {
                       const img = getProductImageUrl(b.product);
                       return (
                         <tr key={b.id}>
-                          <td>
+                          <td style={{ minWidth: '200px', maxWidth: '280px', padding: '10px 16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <img
                                 src={img}
                                 alt={b.product.name}
                                 style={{
-                                  width: '38px',
-                                  height: '38px',
-                                  borderRadius: '8px',
+                                  width: '34px',
+                                  height: '34px',
+                                  borderRadius: '6px',
                                   objectFit: 'cover',
                                   border: '1px solid #e2e8f0',
                                   backgroundColor: '#f8fafc',
@@ -658,44 +658,57 @@ export default function InventorySummary() {
                                   e.target.src = 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&auto=format&fit=crop&q=80';
                                 }}
                               />
-                              <div>
-                                <div style={{ fontWeight: 600, color: '#0f172a' }}>{b.product.name}</div>
-                                <div className="mono" style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div
+                                  title={b.product.name}
+                                  style={{
+                                    fontWeight: 600,
+                                    color: '#0f172a',
+                                    fontSize: '0.875rem',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                  }}
+                                >
+                                  {b.product.name}
+                                </div>
+                                <div className="mono" style={{ fontSize: '0.725rem', color: '#64748b' }}>
                                   {b.product.sku}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="mono" style={{ fontWeight: 600, color: '#1e40af' }}>
+                          <td className="mono" style={{ fontWeight: 600, color: '#1e40af', padding: '10px 16px' }}>
                             {b.batchNumber}
                           </td>
-                          <td style={{ fontWeight: 700, fontSize: '0.95rem' }} className="mono">
+                          <td style={{ fontWeight: 700, fontSize: '0.925rem', padding: '10px 16px' }} className="mono">
                             <span style={{ color: Number(b.currentQuantity) <= 10 ? '#dc2626' : '#0f172a' }}>
                               {Number(b.currentQuantity)}
                             </span>{' '}
-                            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>
+                            <span style={{ fontSize: '0.775rem', color: '#64748b', fontWeight: 500 }}>
                               {b.product.unit}s
                             </span>
                           </td>
-                          <td className="mono">${Number(b.costPrice).toFixed(2)}</td>
-                          <td style={{ fontSize: '0.85rem' }}>{new Date(b.receivedAt).toLocaleDateString()}</td>
-                          <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                          <td className="mono" style={{ padding: '10px 16px' }}>${Number(b.costPrice).toFixed(2)}</td>
+                          <td style={{ fontSize: '0.825rem', padding: '10px 16px' }}>{new Date(b.receivedAt).toLocaleDateString()}</td>
+                          <td style={{ fontSize: '0.825rem', fontWeight: 600, padding: '10px 16px' }}>
                             {b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : '—'}
                           </td>
-                          <td>{getExpiryBadge(b.expiryDate)}</td>
+                          <td style={{ padding: '10px 16px' }}>{getExpiryBadge(b.expiryDate)}</td>
                           {canManageInventory && (
-                            <td style={{ textAlign: 'right' }}>
-                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            <td style={{ textAlign: 'right', padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', gap: '5px' }}>
                                 <button
                                   className="btn btn-outline btn-sm"
-                                  style={{ color: '#16a34a', borderColor: '#86efac', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  style={{ color: '#16a34a', borderColor: '#86efac', padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                                   onClick={() => openAddStockModal(b.product, b)}
                                   title="Quickly add more stock to this batch"
                                 >
-                                  <PlusCircle size={13} /> Add Stock
+                                  <PlusCircle size={12} /> Add Stock
                                 </button>
                                 <button
                                   className="btn btn-outline btn-sm"
+                                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                                   onClick={() => openAdjustmentModal(b.product, b)}
                                   title="Quick stock adjustment (recount variance)"
                                 >
@@ -705,17 +718,17 @@ export default function InventorySummary() {
                                   className="btn btn-outline btn-sm"
                                   onClick={() => openEditBatchModal(b)}
                                   title="Edit batch expiration date, lot number, or wholesale cost"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                                 >
-                                  <CalendarClock size={13} /> Edit
+                                  <CalendarClock size={12} /> Edit
                                 </button>
                                 <button
                                   className="btn btn-outline btn-sm"
-                                  style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                                  style={{ color: '#ef4444', borderColor: '#fca5a5', padding: '4px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                                   onClick={() => openWriteOffModal(b)}
                                   title="Write off damaged or expired stock"
                                 >
-                                  <Trash2 size={13} /> Write-Off
+                                  <Trash2 size={12} /> Write-Off
                                 </button>
                               </div>
                             </td>
@@ -806,7 +819,7 @@ export default function InventorySummary() {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
             {loading ? (
               <LoadingSpinner text="Loading stock movements..." />
             ) : filteredMovements.length === 0 ? (
@@ -814,18 +827,18 @@ export default function InventorySummary() {
                 No stock movement records found matching filters.
               </div>
             ) : (
-              <div className="table-container">
+              <div className="table-container" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
                 <table>
                   <thead>
                     <tr>
-                      <th>Date & Time</th>
-                      <th>Product</th>
-                      <th>Movement Type</th>
-                      <th>Quantity Change</th>
-                      <th>Stock Transition</th>
-                      <th>Target Batch</th>
-                      <th>Audit Reason</th>
-                      <th>Authorized By</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Date & Time</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Product</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Movement Type</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Quantity Change</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Stock Transition</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Target Batch</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Audit Reason</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.725rem' }}>Authorized By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -833,9 +846,26 @@ export default function InventorySummary() {
                       const isPositive = Number(m.quantity) > 0;
                       return (
                         <tr key={m.id}>
-                          <td style={{ fontSize: '0.85rem' }}>{new Date(m.createdAt).toLocaleString()}</td>
-                          <td style={{ fontWeight: 600 }}>{m.product.name}</td>
-                          <td>
+                          <td style={{ fontSize: '0.825rem', padding: '10px 16px' }}>{new Date(m.createdAt).toLocaleString()}</td>
+                          <td style={{ minWidth: '180px', maxWidth: '240px', padding: '10px 16px' }}>
+                            <div
+                              title={m.product?.name}
+                              style={{
+                                fontWeight: 600,
+                                color: '#0f172a',
+                                fontSize: '0.875rem',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {m.product?.name}
+                            </div>
+                            <div className="mono" style={{ fontSize: '0.725rem', color: '#64748b' }}>
+                              {m.product?.sku}
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
                             <span
                               className={`badge ${
                                 m.movementType === 'RECEIPT' || m.movementType === 'OPENING_STOCK'
@@ -855,19 +885,20 @@ export default function InventorySummary() {
                             style={{
                               fontWeight: 700,
                               color: isPositive ? '#10b981' : '#dc2626',
-                              fontSize: '0.95rem'
+                              fontSize: '0.925rem',
+                              padding: '10px 16px'
                             }}
                           >
                             {isPositive ? `+${Number(m.quantity)}` : Number(m.quantity)}
                           </td>
-                          <td className="mono" style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                          <td className="mono" style={{ color: '#64748b', fontSize: '0.825rem', padding: '10px 16px' }}>
                             {Number(m.previousStock)} → <strong>{Number(m.newStock)}</strong>
                           </td>
-                          <td className="mono" style={{ fontSize: '0.8rem', color: '#2563eb' }}>
+                          <td className="mono" style={{ fontSize: '0.8rem', color: '#2563eb', padding: '10px 16px' }}>
                             {m.batch?.batchNumber || '—'}
                           </td>
-                          <td style={{ fontSize: '0.85rem', color: '#334155' }}>{m.reason || '—'}</td>
-                          <td style={{ fontSize: '0.85rem' }}>{m.user?.fullName || 'System'}</td>
+                          <td style={{ fontSize: '0.825rem', color: '#334155', padding: '10px 16px' }}>{m.reason || '—'}</td>
+                          <td style={{ fontSize: '0.825rem', padding: '10px 16px' }}>{m.user?.fullName || 'System'}</td>
                         </tr>
                       );
                     })}

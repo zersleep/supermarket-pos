@@ -9,8 +9,9 @@ router.use(authenticateToken);
 // All authenticated roles can view categories
 router.get('/', categoryController.getCategories);
 
-// Only Owner, Admin, and Inventory Manager can create/update
+// Only Owner, Admin, and Inventory Manager can create/update/delete
 router.post('/', requireRoles(ROLES.OWNER, ROLES.ADMIN, ROLES.INVENTORY_MANAGER), categoryController.createCategory);
 router.put('/:id', requireRoles(ROLES.OWNER, ROLES.ADMIN, ROLES.INVENTORY_MANAGER), categoryController.updateCategory);
+router.delete('/:id', requireRoles(ROLES.OWNER, ROLES.ADMIN, ROLES.INVENTORY_MANAGER), categoryController.deleteCategory);
 
 module.exports = router;
