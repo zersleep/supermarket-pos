@@ -241,14 +241,14 @@ export default function AuditLogs() {
           </div>
         ) : (
           <div style={{ width: '100%', overflowX: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <thead>
                 <tr>
-                  <th style={{ width: '115px', padding: '10px 14px' }}>Time</th>
-                  <th style={{ width: '145px', padding: '10px 14px' }}>Action & Entity</th>
-                  <th style={{ padding: '10px 14px' }}>Summary / Details</th>
-                  <th style={{ width: '130px', padding: '10px 14px' }}>Actor & Source</th>
-                  <th style={{ width: '75px', textAlign: 'right', padding: '10px 14px' }}>Details</th>
+                  <th style={{ width: '15%', padding: '10px 14px' }}>Time</th>
+                  <th style={{ width: '18%', padding: '10px 14px' }}>Action & Entity</th>
+                  <th style={{ width: '35%', padding: '10px 14px' }}>Summary / Details</th>
+                  <th style={{ width: '22%', padding: '10px 14px' }}>Actor & Source</th>
+                  <th style={{ width: '10%', textAlign: 'right', padding: '10px 14px' }}>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -258,7 +258,7 @@ export default function AuditLogs() {
 
                   return (
                     <tr key={log.id}>
-                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                           {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
@@ -266,7 +266,7 @@ export default function AuditLogs() {
                           {new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
+                      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
                         <span className={`badge ${badgeClass} mono`} style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
                           {log.action}
                         </span>
@@ -274,28 +274,31 @@ export default function AuditLogs() {
                           {log.entityType}
                         </div>
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
+                      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
                         <div
                           style={{
                             fontSize: '0.825rem',
                             color: '#1e293b',
                             fontWeight: 500,
-                            lineHeight: 1.4,
-                            wordBreak: 'break-word'
+                            lineHeight: 1.45,
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word'
                           }}
+                          title={summary}
                         >
                           {summary}
                         </div>
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#0f172a', wordBreak: 'break-word' }}>
+                      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.825rem', color: '#0f172a', wordBreak: 'break-word' }}>
                           {log.user?.fullName || log.user?.username || 'System'}
                         </div>
-                        <div className="mono" style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                        <div className="mono" style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', wordBreak: 'break-all' }}>
                           {log.ipAddress || 'Internal'}
                         </div>
                       </td>
-                      <td style={{ textAlign: 'right', padding: '10px 14px' }}>
+                      <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => viewDetails(log)}
