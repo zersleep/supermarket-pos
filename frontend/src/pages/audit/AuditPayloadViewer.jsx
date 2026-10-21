@@ -297,7 +297,7 @@ export function formatCurrencyValue(val) {
 }
 
 /**
- * Generate a quick 1-line human summary for tables
+ * Generate a quick human summary for tables
  */
 export function getAuditLogSummary(log) {
   if (!log) return '—';
@@ -448,14 +448,14 @@ export default function AuditPayloadViewer({ log }) {
   const remainingKeys = Object.keys(details).filter((k) => !consumedKeys.has(k));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Action Header Card */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '14px',
-          padding: '16px',
+          gap: '16px',
+          padding: '16px 20px',
           backgroundColor: '#f8fafc',
           borderRadius: '12px',
           border: '1px solid #e2e8f0'
@@ -463,9 +463,9 @@ export default function AuditPayloadViewer({ log }) {
       >
         <div
           style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '10px',
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
             backgroundColor: `${config.color}15`,
             color: config.color,
             display: 'flex',
@@ -474,18 +474,18 @@ export default function AuditPayloadViewer({ log }) {
             flexShrink: 0
           }}
         >
-          <IconComponent size={24} />
+          <IconComponent size={26} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h4 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
               {config.label}
             </h4>
-            <span className={`badge ${config.badgeClass} mono`} style={{ fontSize: '0.7rem' }}>
+            <span className={`badge ${config.badgeClass} mono`} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
               {log.action}
             </span>
           </div>
-          <p style={{ margin: '3px 0 0', fontSize: '0.825rem', color: '#64748b' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
             {config.description}
           </p>
         </div>
@@ -495,75 +495,71 @@ export default function AuditPayloadViewer({ log }) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '10px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '12px'
         }}
       >
-        <div style={{ padding: '10px 12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+        <div style={{ padding: '12px 14px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
             Timestamp
           </div>
-          <div style={{ fontSize: '0.825rem', fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>
             {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
-          <div style={{ fontSize: '0.725rem', color: '#94a3b8' }}>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
             {new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
         </div>
 
-        <div style={{ padding: '10px 12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+        <div style={{ padding: '12px 14px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
             Actor
           </div>
-          <div style={{ fontSize: '0.825rem', fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginTop: '3px', wordBreak: 'break-word' }}>
             {log.user?.fullName || log.user?.username || 'System Automation'}
           </div>
-          <div style={{ fontSize: '0.725rem', color: '#2563eb', fontWeight: 500 }}>
+          <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, marginTop: '2px' }}>
             {log.user?.role || 'SYSTEM'}
           </div>
         </div>
 
-        <div style={{ padding: '10px 12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+        <div style={{ padding: '12px 14px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
             Target Entity
           </div>
-          <div style={{ fontSize: '0.825rem', fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>
             {log.entityType}
           </div>
           <div
             className="mono"
-            style={{ fontSize: '0.725rem', color: '#94a3b8', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-            title={log.entityId || 'N/A'}
+            style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', wordBreak: 'break-all' }}
           >
-            ID: {log.entityId ? (log.entityId.length > 10 ? `${log.entityId.substring(0, 10)}...` : log.entityId) : 'N/A'}
+            ID: {log.entityId || 'N/A'}
           </div>
         </div>
 
-        <div style={{ padding: '10px 12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
-            Client IP
+        <div style={{ padding: '12px 14px', backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+            Client IP / Source
           </div>
-          <div className="mono" style={{ fontSize: '0.825rem', fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
-            {log.ipAddress || 'Internal'}
+          <div className="mono" style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>
+            {log.ipAddress || 'Internal Network'}
           </div>
-          <div
-            style={{ fontSize: '0.725rem', color: '#94a3b8', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-            title={log.userAgent || 'Direct Server'}
-          >
-            {log.userAgent ? (log.userAgent.includes('Mozilla') ? 'Web Browser' : 'API Client') : 'Local'}
+          <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px', wordBreak: 'break-word' }}>
+            {log.userAgent || 'Direct Server Operation'}
           </div>
         </div>
       </div>
 
       {/* Segmented View Switcher */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
           <button
             type="button"
             onClick={() => setViewMode('visual')}
             style={{
-              padding: '5px 12px',
-              fontSize: '0.8rem',
+              padding: '6px 14px',
+              fontSize: '0.825rem',
               fontWeight: 600,
               borderRadius: '6px',
               border: 'none',
@@ -577,14 +573,14 @@ export default function AuditPayloadViewer({ log }) {
               transition: 'all 0.15s ease'
             }}
           >
-            <FileText size={14} /> Formatted View
+            <FileText size={15} /> Formatted View
           </button>
           <button
             type="button"
             onClick={() => setViewMode('json')}
             style={{
-              padding: '5px 12px',
-              fontSize: '0.8rem',
+              padding: '6px 14px',
+              fontSize: '0.825rem',
               fontWeight: 600,
               borderRadius: '6px',
               border: 'none',
@@ -598,7 +594,7 @@ export default function AuditPayloadViewer({ log }) {
               transition: 'all 0.15s ease'
             }}
           >
-            <Code size={14} /> Raw JSON
+            <Code size={15} /> Raw JSON
           </button>
         </div>
 
@@ -607,7 +603,7 @@ export default function AuditPayloadViewer({ log }) {
             type="button"
             className="btn btn-outline btn-sm"
             onClick={handleCopyJson}
-            style={{ fontSize: '0.75rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ fontSize: '0.8rem', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             {copied ? (
               <>
@@ -624,11 +620,11 @@ export default function AuditPayloadViewer({ log }) {
 
       {/* VIEW MODE 1: VISUAL FORMATTED VIEW */}
       {viewMode === 'visual' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {!hasDetails ? (
             <div
               style={{
-                padding: '24px',
+                padding: '30px',
                 textAlign: 'center',
                 backgroundColor: '#f8fafc',
                 borderRadius: '10px',
@@ -637,7 +633,7 @@ export default function AuditPayloadViewer({ log }) {
                 fontSize: '0.875rem'
               }}
             >
-              <CheckCircle2 size={24} color="#94a3b8" style={{ margin: '0 auto 8px' }} />
+              <CheckCircle2 size={26} color="#94a3b8" style={{ margin: '0 auto 8px' }} />
               No additional payload parameters were recorded for this action.
             </div>
           ) : (
@@ -649,24 +645,29 @@ export default function AuditPayloadViewer({ log }) {
                     backgroundColor: '#ffffff',
                     border: '1px solid #bfdbfe',
                     borderRadius: '10px',
-                    padding: '14px 16px',
+                    padding: '16px 20px',
                     boxShadow: '0 2px 4px rgba(37,99,235,0.04)'
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', marginBottom: '10px' }}>
                     Selling Price Adjustment
                   </div>
+                  {details.name && (
+                    <div style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '12px', wordBreak: 'break-word' }}>
+                      Product: {details.name}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                    <div style={{ padding: '8px 14px', backgroundColor: '#f1f5f9', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Original Price</div>
-                      <div className="currency-amount" style={{ fontSize: '1.1rem', fontWeight: 700, color: '#475569' }}>
+                    <div style={{ padding: '10px 18px', backgroundColor: '#f1f5f9', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Original Price</div>
+                      <div className="currency-amount" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#475569', marginTop: '2px' }}>
                         ${oldPrice.toFixed(2)}
                       </div>
                     </div>
-                    <ArrowRight size={20} color="#2563eb" />
-                    <div style={{ padding: '8px 14px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#1d4ed8' }}>New Price</div>
-                      <div className="currency-amount" style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1d4ed8' }}>
+                    <ArrowRight size={22} color="#2563eb" />
+                    <div style={{ padding: '10px 18px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                      <div style={{ fontSize: '0.725rem', color: '#1d4ed8', fontWeight: 600 }}>New Price</div>
+                      <div className="currency-amount" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1d4ed8', marginTop: '2px' }}>
                         ${newPrice.toFixed(2)}
                       </div>
                     </div>
@@ -677,15 +678,15 @@ export default function AuditPayloadViewer({ log }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          padding: '6px 10px',
-                          borderRadius: '6px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
                           backgroundColor: priceDiff >= 0 ? '#ecfdf5' : '#fef2f2',
                           color: priceDiff >= 0 ? '#059669' : '#dc2626',
-                          fontSize: '0.8rem',
-                          fontWeight: 600
+                          fontSize: '0.85rem',
+                          fontWeight: 700
                         }}
                       >
-                        {priceDiff >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                        {priceDiff >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
                         {priceDiff >= 0 ? `+$${priceDiff.toFixed(2)}` : `-$${Math.abs(priceDiff).toFixed(2)}`}
                         {pricePercent && ` (${priceDiff >= 0 ? '+' : ''}${pricePercent}%)`}
                       </div>
@@ -701,18 +702,18 @@ export default function AuditPayloadViewer({ log }) {
                     backgroundColor: '#ffffff',
                     border: '1px solid #e2e8f0',
                     borderRadius: '10px',
-                    padding: '14px 16px'
+                    padding: '16px 20px'
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
                     Status Transition
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                    <span className="badge badge-outline mono" style={{ fontSize: '0.825rem', padding: '6px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    <span className="badge badge-outline mono" style={{ fontSize: '0.85rem', padding: '8px 14px' }}>
                       {details.oldStatus}
                     </span>
-                    <ArrowRight size={18} color="#64748b" />
-                    <span className="badge badge-primary mono" style={{ fontSize: '0.825rem', padding: '6px 12px' }}>
+                    <ArrowRight size={20} color="#64748b" />
+                    <span className="badge badge-primary mono" style={{ fontSize: '0.85rem', padding: '8px 14px' }}>
                       {details.newStatus}
                     </span>
                   </div>
@@ -726,45 +727,46 @@ export default function AuditPayloadViewer({ log }) {
                     backgroundColor: '#ffffff',
                     border: '1px solid #e2e8f0',
                     borderRadius: '10px',
-                    padding: '14px 16px'
+                    padding: '16px 20px'
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
                     Cash Reconciliation Summary
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Expected Cash</div>
-                      <div className="currency-amount" style={{ fontSize: '1rem', fontWeight: 700 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                    <div style={{ padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Expected Cash</div>
+                      <div className="currency-amount" style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: '2px' }}>
                         ${Number(details.expectedCash).toFixed(2)}
                       </div>
                     </div>
-                    <div style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Actual Cash</div>
-                      <div className="currency-amount" style={{ fontSize: '1rem', fontWeight: 700 }}>
+                    <div style={{ padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Actual Counted Cash</div>
+                      <div className="currency-amount" style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: '2px' }}>
                         ${Number(details.actualCash).toFixed(2)}
                       </div>
                     </div>
                     <div
                       style={{
-                        padding: '8px 12px',
+                        padding: '10px 14px',
                         borderRadius: '8px',
                         backgroundColor: cashDiff === 0 ? '#ecfdf5' : cashDiff > 0 ? '#fffbeb' : '#fef2f2',
                         border: `1px solid ${cashDiff === 0 ? '#a7f3d0' : cashDiff > 0 ? '#fde68a' : '#fecaca'}`
                       }}
                     >
-                      <div style={{ fontSize: '0.7rem', color: cashDiff === 0 ? '#059669' : cashDiff > 0 ? '#b45309' : '#dc2626' }}>
+                      <div style={{ fontSize: '0.725rem', color: cashDiff === 0 ? '#059669' : cashDiff > 0 ? '#b45309' : '#dc2626', fontWeight: 600 }}>
                         Variance / Discrepancy
                       </div>
                       <div
                         className="currency-amount"
                         style={{
-                          fontSize: '1rem',
+                          fontSize: '1.15rem',
                           fontWeight: 700,
+                          marginTop: '2px',
                           color: cashDiff === 0 ? '#059669' : cashDiff > 0 ? '#b45309' : '#dc2626'
                         }}
                       >
-                        {cashDiff === 0 ? '$0.00 (Balanced)' : cashDiff > 0 ? `+$${cashDiff.toFixed(2)} (Surplus)` : `-$${Math.abs(cashDiff).toFixed(2)} (Short)`}
+                        {cashDiff === 0 ? '$0.00 (Balanced)' : cashDiff > 0 ? `+$${cashDiff.toFixed(2)} (Surplus)` : `-$${Math.abs(cashDiff).toFixed(2)} (Shortage)`}
                       </div>
                     </div>
                   </div>
@@ -777,19 +779,19 @@ export default function AuditPayloadViewer({ log }) {
                   style={{
                     backgroundColor: '#fffbeb',
                     border: '1px solid #fde68a',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    padding: '12px 18px',
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: '10px'
+                    gap: '12px'
                   }}
                 >
-                  <AlertCircle size={18} color="#d97706" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <AlertCircle size={20} color="#d97706" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontSize: '0.725rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
                       Reason / Justification
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#78350f', marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#78350f', marginTop: '3px', lineHeight: 1.4, wordBreak: 'break-word' }}>
                       "{details.reason}"
                     </div>
                   </div>
@@ -808,7 +810,7 @@ export default function AuditPayloadViewer({ log }) {
                 >
                   <div
                     style={{
-                      padding: '10px 16px',
+                      padding: '12px 20px',
                       backgroundColor: '#f8fafc',
                       borderBottom: '1px solid #e2e8f0',
                       fontSize: '0.75rem',
@@ -838,24 +840,25 @@ export default function AuditPayloadViewer({ log }) {
                         <div
                           key={key}
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(160px, 220px) 1fr',
+                            gap: '16px',
                             alignItems: 'center',
-                            padding: '10px 16px',
-                            backgroundColor: isEven ? '#ffffff' : '#fcfcfd',
+                            padding: '12px 20px',
+                            backgroundColor: isEven ? '#ffffff' : '#f8fafc',
                             borderBottom: idx === remainingKeys.length - 1 ? 'none' : '1px solid #f1f5f9',
-                            fontSize: '0.85rem'
+                            fontSize: '0.875rem'
                           }}
                         >
-                          <span style={{ color: '#64748b', fontWeight: 500 }}>
+                          <span style={{ color: '#475569', fontWeight: 600 }}>
                             {formatFieldLabel(key)}
                           </span>
 
-                          <span style={{ fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>
+                          <div style={{ fontWeight: 500, color: '#0f172a', wordBreak: 'break-word' }}>
                             {Array.isArray(val) ? (
-                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                 {val.map((item, itemIdx) => (
-                                  <span key={itemIdx} className="badge badge-outline" style={{ fontSize: '0.75rem' }}>
+                                  <span key={itemIdx} className="badge badge-outline" style={{ fontSize: '0.775rem' }}>
                                     {String(item)}
                                   </span>
                                 ))}
@@ -865,17 +868,17 @@ export default function AuditPayloadViewer({ log }) {
                                 {val ? 'Yes / Enabled' : 'No / Disabled'}
                               </span>
                             ) : isMoney ? (
-                              <span className="currency-amount" style={{ color: '#2563eb' }}>
+                              <span className="currency-amount" style={{ color: '#2563eb', fontWeight: 700, fontSize: '0.95rem' }}>
                                 {formatCurrencyValue(val)}
                               </span>
                             ) : typeof val === 'object' && val !== null ? (
-                              <span className="mono" style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              <span className="mono" style={{ fontSize: '0.8rem', color: '#475569', wordBreak: 'break-all' }}>
                                 {JSON.stringify(val)}
                               </span>
                             ) : (
                               String(val ?? '—')
                             )}
-                          </span>
+                          </div>
                         </div>
                       );
                     })}
@@ -894,14 +897,16 @@ export default function AuditPayloadViewer({ log }) {
             style={{
               backgroundColor: '#0f172a',
               color: '#38bdf8',
-              padding: '16px',
+              padding: '18px',
               borderRadius: '10px',
-              fontSize: '0.825rem',
+              fontSize: '0.85rem',
               lineHeight: 1.6,
               overflowX: 'auto',
-              maxHeight: '360px',
+              maxHeight: '400px',
               fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-              margin: 0
+              margin: 0,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
             }}
           >
             {JSON.stringify(details, null, 2)}

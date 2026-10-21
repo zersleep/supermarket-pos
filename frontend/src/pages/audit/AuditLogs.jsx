@@ -228,9 +228,11 @@ export default function AuditLogs() {
       </div>
 
       {/* Main Table */}
-      <div className="card">
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <LoadingSpinner text="Loading audit records..." />
+          <div style={{ padding: '40px' }}>
+            <LoadingSpinner text="Loading audit records..." />
+          </div>
         ) : filteredLogs.length === 0 ? (
           <div style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>
             <ShieldAlert size={32} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
@@ -238,17 +240,15 @@ export default function AuditLogs() {
             <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Try clearing filters or search keywords.</div>
           </div>
         ) : (
-          <div className="table-container">
-            <table>
+          <div style={{ width: '100%', overflowX: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
               <thead>
                 <tr>
-                  <th style={{ width: '170px' }}>Timestamp</th>
-                  <th style={{ width: '150px' }}>Action</th>
-                  <th style={{ width: '120px' }}>Entity</th>
-                  <th>Event Summary / Details Preview</th>
-                  <th style={{ width: '140px' }}>Actor</th>
-                  <th style={{ width: '110px' }}>IP Address</th>
-                  <th style={{ width: '100px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ width: '115px', padding: '10px 14px' }}>Time</th>
+                  <th style={{ width: '145px', padding: '10px 14px' }}>Action & Entity</th>
+                  <th style={{ padding: '10px 14px' }}>Summary / Details</th>
+                  <th style={{ width: '130px', padding: '10px 14px' }}>Actor & Source</th>
+                  <th style={{ width: '75px', textAlign: 'right', padding: '10px 14px' }}>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -258,55 +258,51 @@ export default function AuditLogs() {
 
                   return (
                     <tr key={log.id}>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontSize: '0.825rem', fontWeight: 600 }}>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                           {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        <div style={{ fontSize: '0.725rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
                           {new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </td>
-                      <td>
-                        <span className={`badge ${badgeClass} mono`} style={{ fontSize: '0.72rem' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span className={`badge ${badgeClass} mono`} style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
                           {log.action}
                         </span>
+                        <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '3px', fontWeight: 500 }}>
+                          {log.entityType}
+                        </div>
                       </td>
-                      <td>
-                        <span style={{ fontWeight: 500, fontSize: '0.825rem' }}>{log.entityType}</span>
-                      </td>
-                      <td>
+                      <td style={{ padding: '10px 14px' }}>
                         <div
                           style={{
                             fontSize: '0.825rem',
-                            color: '#334155',
-                            maxWidth: '380px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                            color: '#1e293b',
+                            fontWeight: 500,
+                            lineHeight: 1.4,
+                            wordBreak: 'break-word'
                           }}
-                          title={summary}
                         >
                           {summary}
                         </div>
                       </td>
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#0f172a', wordBreak: 'break-word' }}>
                           {log.user?.fullName || log.user?.username || 'System'}
                         </div>
-                        {log.user?.role && (
-                          <div style={{ fontSize: '0.7rem', color: '#2563eb' }}>{log.user.role}</div>
-                        )}
+                        <div className="mono" style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                          {log.ipAddress || 'Internal'}
+                        </div>
                       </td>
-                      <td className="mono" style={{ fontSize: '0.775rem', color: '#64748b' }}>
-                        {log.ipAddress || '—'}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right', padding: '10px 14px' }}>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => viewDetails(log)}
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
                           title="View formatted event payload"
                         >
-                          <Eye size={13} /> Details
+                          <Eye size={12} /> View
                         </button>
                       </td>
                     </tr>
@@ -327,7 +323,7 @@ export default function AuditLogs() {
             ? `Audit Event: ${ACTION_CONFIG[selectedLog.action]?.label || selectedLog.action}`
             : 'Audit Event Details'
         }
-        maxWidth="680px"
+        maxWidth="880px"
       >
         <AuditPayloadViewer log={selectedLog} />
       </Modal>
