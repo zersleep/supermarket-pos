@@ -13,7 +13,9 @@ import {
   Crown,
   CheckCircle2,
   AlertCircle,
-  Clock
+  Clock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +47,7 @@ export default function UserManagement() {
     isActive: true
   });
   const [actionLoading, setActionLoading] = useState(false);
+  const [showModalPassword, setShowModalPassword] = useState(false);
 
   const { isOwner, user: currentUser } = useAuth();
 
@@ -624,13 +627,36 @@ export default function UserManagement() {
             <label className="form-label">
               {isEditing ? 'New Password (Leave blank to keep current)' : 'Password * (Min 8 chars)'}
             </label>
-            <input
-              type="password"
-              className="form-input"
-              placeholder={isEditing ? '••••••••' : 'Enter strong password'}
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type={showModalPassword ? 'text' : 'password'}
+                className="form-input"
+                style={{ paddingRight: '40px', width: '100%' }}
+                placeholder={isEditing ? '••••••••' : 'Enter strong password'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowModalPassword(!showModalPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title={showModalPassword ? 'Hide password' : 'Show password'}
+                aria-label={showModalPassword ? 'Hide password' : 'Show password'}
+              >
+                {showModalPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {/* 3 Clear Roles Dropdown */}
