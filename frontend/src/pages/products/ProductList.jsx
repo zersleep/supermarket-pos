@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -16,7 +17,8 @@ import {
   Boxes,
   AlertCircle,
   Truck,
-  Building2
+  Building2,
+  Folder
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -61,6 +63,13 @@ export default function ProductList() {
     expiryDate: ''
   });
   const [formLoading, setFormLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Quick Category Modal State
+  const [quickCatModalOpen, setQuickCatModalOpen] = useState(false);
+  const [quickCatName, setQuickCatName] = useState('');
+  const [quickCatDesc, setQuickCatDesc] = useState('');
+  const [quickCatLoading, setQuickCatLoading] = useState(false);
 
   const { canManageProducts } = useAuth();
 
@@ -100,6 +109,33 @@ export default function ProductList() {
       return () => clearTimeout(timer);
     }
   }, [success]);
+
+  const handleQuickCategorySubmit = async (e) => {
+    e.preventDefault();
+    if (!quickCatName.trim()) return;
+    setQuickCatLoading(true);
+    try {
+      const res = await api.post('/categories', {
+        name: quickCatName.trim(),
+        description: quickCatDesc.trim() || undefined,
+        isActive: true
+      });
+      const newCat = res.data;
+      // Refresh categories list
+      const catRes = await api.get('/categories');
+      setCategories(catRes.data || []);
+      // Auto-select newly created category in product form
+      setFormData((prev) => ({ ...prev, categoryId: newCat.id }));
+      setQuickCatName('');
+      setQuickCatDesc('');
+      setQuickCatModalOpen(false);
+      setSuccess(`Category "${newCat.name}" created and selected.`);
+    } catch (err) {
+      alert(err.message || 'Failed to create category.');
+    } finally {
+      setQuickCatLoading(false);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -268,9 +304,22 @@ export default function ProductList() {
           </p>
         </div>
         {canManageProducts && (
-          <button onClick={openCreateModal} className="btn btn-primary">
-            <Plus size={16} /> Add Product
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => navigate('/categories')}
+              className="btn btn-outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Folder size={16} /> Manage Categories
+            </button>
+            <button
+              onClick={openCreateModal}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Plus size={16} /> Add Product
+            </button>
+          </div>
         )}
       </div>
 
@@ -532,7 +581,24 @@ export default function ProductList() {
 
             <div className="grid-2" style={{ marginTop: '4px' }}>
               <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600 }}>Category</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>Category</label>
+                  <button
+                    type="button"
+                    onClick={() => setQuickCatModalOpen(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    + Add New Category
+                  </button>
+                </div>
                 <select
                   className="form-select"
                   value={formData.categoryId}
@@ -1005,6 +1071,55 @@ export default function ProductList() {
               style={{ minWidth: '130px' }}
             >
               {formLoading ? 'Saving...' : isEditing ? 'Update Product' : 'Create Product'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Quick Add Category Modal */}
+      <Modal
+        isOpen={quickCatModalOpen}
+        onClose={() => setQuickCatModalOpen(false)}
+        title="Add New Category"
+        maxWidth="460px"
+      >
+        <form onSubmit={handleQuickCategorySubmit}>
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Category Name *</label>
+            <input
+              type="text"
+              required
+              className="form-input"
+              placeholder="e.g. Dairy & Eggs, Beverages, Fresh Produce"
+              value={quickCatName}
+              onChange={(e) => setQuickCatName(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Description (Optional)</label>
+            <textarea
+              className="form-input"
+              rows="2"
+              placeholder="Brief description of products in this category..."
+              value={quickCatDesc}
+              onChange={(e) => setQuickCatDesc(e.target.value)}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setQuickCatModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={quickCatLoading || !quickCatName.trim()}
+            >
+              {quickCatLoading ? 'Creating...' : 'Save & Select Category'}
             </button>
           </div>
         </form>

@@ -69,7 +69,22 @@ const stockAdjustmentSchema = z.object({
   type: z.enum(['ADJUSTMENT_ADD', 'ADJUSTMENT_SUBTRACT']),
   quantity: z.number().positive('Quantity must be greater than 0'),
   reason: z.string().min(3, 'Reason is required for inventory audit'),
-  expiryDate: z.string().optional().or(z.literal('')).nullable()
+  expiryDate: z.string().optional().or(z.literal('')).nullable(),
+  createNewBatch: z.boolean().optional(),
+  batchNumber: z.string().max(100).optional().or(z.literal('')).nullable(),
+  costPrice: z.number().min(0).optional().nullable()
+});
+
+const addStockSchema = z.object({
+  productId: z.string().uuid('Product ID must be a valid UUID'),
+  quantity: z.number().positive('Quantity must be greater than 0'),
+  batchId: z.string().uuid().optional().or(z.literal('')).nullable(),
+  createNewBatch: z.boolean().optional(),
+  batchNumber: z.string().max(100).optional().or(z.literal('')).nullable(),
+  costPrice: z.number().min(0, 'Cost price cannot be negative').optional().nullable(),
+  expiryDate: z.string().optional().or(z.literal('')).nullable(),
+  movementType: z.enum(['RECEIPT', 'ADJUSTMENT_ADD', 'OPENING_STOCK']).optional(),
+  reason: z.string().max(255).optional().or(z.literal(''))
 });
 
 const writeOffSchema = z.object({
@@ -185,6 +200,7 @@ module.exports = {
   categorySchema,
   productSchema,
   stockAdjustmentSchema,
+  addStockSchema,
   writeOffSchema,
   supplierSchema,
   purchaseOrderSchema,

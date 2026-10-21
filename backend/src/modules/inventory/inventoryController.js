@@ -1,7 +1,7 @@
 const prisma = require('../../config/db');
 const { sendSuccess, sendPaginated, sendError } = require('../../utils/response');
 const { recordAuditLog } = require('../../services/auditService');
-const { stockAdjustmentSchema, writeOffSchema } = require('../../validators');
+const { stockAdjustmentSchema, addStockSchema, writeOffSchema } = require('../../validators');
 
 /**
  * Get inventory summary and alerts
@@ -201,32 +201,33 @@ async function adjustStock(req, res, next) {
             where: { id: targetBatch.id },
             data: { currentQuantity: { increment: adjustQty } }
           });
-        } else {
-          // If no batch was specified, check if the product has existing active batches
-          // Default to incrementing the latest active batch to avoid creating fragmented ghost batches
-          const latestActiveBatch = product.batches && product.batches.length > 0
-            ? product.batches[product.batches.length - 1]
-            : null;
+        } else if (data.createNewBatch || !product.batches || product.batches.length === 0) {
+          // Explicitly create a new adjustment batch
+          const batchNum = data.batchNumber && data.batchNumber.trim()
+            ? data.batchNumber.trim()
+            : `ADJ-ADD-${Date.now().toString().slice(-6)}`;
+          const cost = (data.costPrice !== undefined && data.costPrice !== null && !isNaN(data.costPrice))
+            ? Number(data.costPrice)
+            : Number(product.costPrice || 0);
 
-          if (latestActiveBatch) {
-            targetBatch = latestActiveBatch;
-            await tx.inventoryBatch.update({
-              where: { id: targetBatch.id },
-              data: { currentQuantity: { increment: adjustQty } }
-            });
-          } else {
-            // Create a new adjustment batch
-            targetBatch = await tx.inventoryBatch.create({
-              data: {
-                batchNumber: `ADJ-ADD-${Date.now().toString().slice(-6)}`,
-                productId: product.id,
-                initialQuantity: adjustQty,
-                currentQuantity: adjustQty,
-                costPrice: product.costPrice,
-                expiryDate: data.expiryDate ? new Date(data.expiryDate) : null
-              }
-            });
-          }
+          targetBatch = await tx.inventoryBatch.create({
+            data: {
+              batchNumber: batchNum,
+              productId: product.id,
+              initialQuantity: adjustQty,
+              currentQuantity: adjustQty,
+              costPrice: cost,
+              expiryDate: data.expiryDate ? new Date(data.expiryDate) : null
+            }
+          });
+        } else {
+          // Default to incrementing the latest active batch
+          const latestActiveBatch = product.batches[product.batches.length - 1];
+          targetBatch = latestActiveBatch;
+          await tx.inventoryBatch.update({
+            where: { id: targetBatch.id },
+            data: { currentQuantity: { increment: adjustQty } }
+          });
         }
 
         await tx.stockMovement.create({
@@ -301,6 +302,120 @@ async function adjustStock(req, res, next) {
     });
 
     return sendSuccess(res, result, 'Stock adjusted successfully.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Direct Add Stock (Goods intake, direct supplier restocking, manual delivery receipt)
+ */
+async function addStock(req, res, next) {
+  try {
+    const data = addStockSchema.parse(req.body);
+
+    const product = await prisma.product.findUnique({
+      where: { id: data.productId },
+      include: {
+        batches: {
+          where: { isWriteOff: false, currentQuantity: { gt: 0 } },
+          orderBy: { receivedAt: 'asc' }
+        }
+      }
+    });
+
+    if (!product) {
+      return sendError(res, 'Product not found.', 404);
+    }
+
+    const currentTotalStock = product.batches.reduce((sum, b) => sum + Number(b.currentQuantity), 0);
+    const addQty = Number(data.quantity);
+    const newTotalStock = currentTotalStock + addQty;
+    const effectiveCostPrice = (data.costPrice !== undefined && data.costPrice !== null && !isNaN(data.costPrice))
+      ? Number(data.costPrice)
+      : Number(product.costPrice || 0);
+
+    const result = await prisma.$transaction(async (tx) => {
+      let targetBatch = null;
+
+      // If an existing batch was selected and not explicitly creating a new batch
+      if (data.batchId && !data.createNewBatch) {
+        targetBatch = await tx.inventoryBatch.findUnique({
+          where: { id: data.batchId }
+        });
+        if (!targetBatch) {
+          throw new Error('Specified destination batch does not exist.');
+        }
+
+        await tx.inventoryBatch.update({
+          where: { id: targetBatch.id },
+          data: { currentQuantity: { increment: addQty } }
+        });
+      } else {
+        // Create a new batch
+        const generatedBatchNum = data.batchNumber && data.batchNumber.trim()
+          ? data.batchNumber.trim()
+          : `BAT-${Date.now().toString().slice(-6)}`;
+
+        targetBatch = await tx.inventoryBatch.create({
+          data: {
+            batchNumber: generatedBatchNum,
+            productId: product.id,
+            initialQuantity: addQty,
+            currentQuantity: addQty,
+            costPrice: effectiveCostPrice,
+            expiryDate: data.expiryDate ? new Date(data.expiryDate) : null
+          }
+        });
+      }
+
+      const movementType = data.movementType || 'RECEIPT';
+      const reason = data.reason && data.reason.trim()
+        ? data.reason.trim()
+        : (movementType === 'RECEIPT' ? 'Direct stock intake' : 'Stock addition');
+
+      await tx.stockMovement.create({
+        data: {
+          productId: product.id,
+          batchId: targetBatch.id,
+          movementType: movementType,
+          quantity: addQty,
+          previousStock: currentTotalStock,
+          newStock: newTotalStock,
+          reason: reason,
+          referenceType: movementType,
+          referenceId: targetBatch.id,
+          userId: req.user.id
+        }
+      });
+
+      return {
+        product: { id: product.id, name: product.name, sku: product.sku },
+        batch: targetBatch,
+        previousStock: currentTotalStock,
+        addedQuantity: addQty,
+        newStock: newTotalStock
+      };
+    });
+
+    await recordAuditLog({
+      userId: req.user.id,
+      action: 'STOCK_ADDITION',
+      entityType: 'Product',
+      entityId: product.id,
+      details: {
+        productName: product.name,
+        batchNumber: result.batch.batchNumber,
+        batchId: result.batch.id,
+        quantity: addQty,
+        costPrice: effectiveCostPrice,
+        movementType: data.movementType || 'RECEIPT',
+        reason: data.reason
+      },
+      req
+    });
+
+    return sendSuccess(res, result, `Successfully added ${addQty} units to inventory.`, 201);
   } catch (err) {
     next(err);
   }
@@ -397,5 +512,6 @@ module.exports = {
   getBatches,
   getStockMovements,
   adjustStock,
+  addStock,
   writeOffBatch
 };

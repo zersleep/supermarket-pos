@@ -43,6 +43,20 @@ export default function InventorySummary() {
   const [movementSearch, setMovementSearch] = useState('');
   const [movementTypeFilter, setMovementTypeFilter] = useState('ALL');
 
+  // Add Stock Modal State
+  const [addStockModalOpen, setAddStockModalOpen] = useState(false);
+  const [addStockData, setAddStockData] = useState({
+    productId: '',
+    batchMode: 'new', // 'new' (new batch) or 'existing' (replenish batch)
+    batchId: '',
+    batchNumber: '',
+    quantity: '',
+    costPrice: '',
+    expiryDate: '',
+    movementType: 'RECEIPT', // 'RECEIPT' or 'ADJUSTMENT_ADD'
+    reason: 'Direct shipment receipt'
+  });
+
   // Adjustment Modal State
   const [adjModalOpen, setAdjModalOpen] = useState(false);
   const [adjData, setAdjData] = useState({
@@ -91,13 +105,22 @@ export default function InventorySummary() {
       setMovements(movRes.data || []);
       setProducts(prodRes.data || []);
 
-      if (prodRes.data?.length > 0 && !adjData.productId) {
+      if (prodRes.data?.length > 0) {
         const firstProd = prodRes.data[0];
-        setAdjData((prev) => ({
-          ...prev,
-          productId: firstProd.id,
-          batchId: firstProd.batches?.[0]?.id || ''
-        }));
+        if (!adjData.productId) {
+          setAdjData((prev) => ({
+            ...prev,
+            productId: firstProd.id,
+            batchId: firstProd.batches?.[0]?.id || ''
+          }));
+        }
+        if (!addStockData.productId) {
+          setAddStockData((prev) => ({
+            ...prev,
+            productId: firstProd.id,
+            costPrice: firstProd.costPrice !== undefined ? Number(firstProd.costPrice) : ''
+          }));
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to load inventory data.');
@@ -109,6 +132,76 @@ export default function InventorySummary() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const openAddStockModal = (preselectedProduct = null, preselectedBatch = null) => {
+    const prod = preselectedProduct || products[0] || null;
+    const hasBatches = prod?.batches && prod.batches.length > 0;
+    const mode = preselectedBatch ? 'existing' : 'new';
+    const batchId = preselectedBatch ? preselectedBatch.id : (hasBatches ? prod.batches[0].id : '');
+
+    setAddStockData({
+      productId: prod?.id || '',
+      batchMode: mode,
+      batchId: batchId,
+      batchNumber: `BAT-${Date.now().toString().slice(-6)}`,
+      quantity: '',
+      costPrice: prod?.costPrice !== undefined ? Number(prod.costPrice) : '',
+      expiryDate: '',
+      movementType: 'RECEIPT',
+      reason: 'Direct shipment receipt'
+    });
+    setAddStockModalOpen(true);
+  };
+
+  const handleAddStockProductChange = (productId) => {
+    const prod = products.find((p) => p.id === productId);
+    const hasBatches = prod?.batches && prod.batches.length > 0;
+    setAddStockData((prev) => ({
+      ...prev,
+      productId,
+      costPrice: prod?.costPrice !== undefined ? Number(prod.costPrice) : '',
+      batchMode: hasBatches ? prev.batchMode : 'new',
+      batchId: hasBatches ? prod.batches[0].id : '',
+      quantity: ''
+    }));
+  };
+
+  const handleAddStockSubmit = async (e) => {
+    e.preventDefault();
+    if (!addStockData.productId) {
+      alert('Please select a product.');
+      return;
+    }
+    const qty = Number(addStockData.quantity);
+    if (!qty || qty <= 0) {
+      alert('Please enter a valid quantity greater than 0.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const payload = {
+        productId: addStockData.productId,
+        quantity: qty,
+        createNewBatch: addStockData.batchMode === 'new',
+        batchId: addStockData.batchMode === 'existing' ? addStockData.batchId : undefined,
+        batchNumber: addStockData.batchMode === 'new' ? (addStockData.batchNumber || undefined) : undefined,
+        costPrice: addStockData.costPrice !== '' ? Number(addStockData.costPrice) : undefined,
+        expiryDate: addStockData.expiryDate || undefined,
+        movementType: addStockData.movementType || 'RECEIPT',
+        reason: addStockData.reason || 'Direct stock intake'
+      };
+
+      await api.post('/inventory/add-stock', payload);
+      setSuccess(`Successfully added ${qty} units to inventory!`);
+      setAddStockModalOpen(false);
+      loadData();
+    } catch (err) {
+      alert(err.message || 'Failed to add stock.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // When selected product in adjustment modal changes, update target batch
   const handleProductSelectChange = (productId) => {
@@ -277,17 +370,34 @@ export default function InventorySummary() {
       ? (adjData.batchId ? currentBatchQty + adjQtyNumber : adjQtyNumber)
       : Math.max(0, currentBatchQty - adjQtyNumber);
 
+  // Current product and calculations for Add Stock modal
+  const currentAddProduct = products.find((p) => p.id === addStockData.productId) || products[0];
+  const currentAddBatch = currentAddProduct?.batches?.find((b) => b.id === addStockData.batchId);
+  const addStockQtyNumber = Number(addStockData.quantity) || 0;
+  const currentProductTotalStock = Number(currentAddProduct?.currentStock || 0);
+  const projectedProductTotalStock = currentProductTotalStock + addStockQtyNumber;
+  const totalValueAdded = addStockQtyNumber * (Number(addStockData.costPrice) || Number(currentAddProduct?.costPrice || 0));
+
   return (
     <div>
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Inventory & Batch Control</h1>
           <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
-            Batch expiration tracking (FEFO), stock adjustments, and authorized write-offs
+            Batch expiration tracking (FEFO), direct stock intake, adjustments, and authorized write-offs
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {canManageInventory && (
+            <button
+              onClick={() => openAddStockModal()}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <PlusCircle size={16} /> Add Stock
+            </button>
+          )}
           <button onClick={loadData} className="btn btn-outline btn-sm">
             <RefreshCw size={14} /> Refresh
           </button>
@@ -447,7 +557,24 @@ export default function InventorySummary() {
               <LoadingSpinner text="Loading inventory batches..." />
             ) : filteredBatches.length === 0 ? (
               <div style={{ padding: '50px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                No inventory batches found matching your search.
+                <Boxes size={48} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                <p style={{ fontSize: '1rem', fontWeight: 600, color: '#475569' }}>
+                  No inventory batches found matching your search.
+                </p>
+                <p style={{ fontSize: '0.875rem', marginTop: '4px' }}>
+                  {batchSearch || batchStatusFilter !== 'ALL'
+                    ? 'Try adjusting or clearing your search filters.'
+                    : 'Add stock or receive shipments to start tracking active batches.'}
+                </p>
+                {canManageInventory && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => openAddStockModal()}
+                  >
+                    <PlusCircle size={15} /> Add Stock Now
+                  </button>
+                )}
               </div>
             ) : (
               <div className="table-container">
@@ -517,8 +644,16 @@ export default function InventorySummary() {
                               <div style={{ display: 'inline-flex', gap: '6px' }}>
                                 <button
                                   className="btn btn-outline btn-sm"
+                                  style={{ color: '#16a34a', borderColor: '#86efac', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  onClick={() => openAddStockModal(b.product, b)}
+                                  title="Quickly add more stock to this batch"
+                                >
+                                  <PlusCircle size={13} /> Add Stock
+                                </button>
+                                <button
+                                  className="btn btn-outline btn-sm"
                                   onClick={() => openAdjustmentModal(b.product, b)}
-                                  title="Quick stock adjustment for this batch"
+                                  title="Quick stock adjustment (recount variance)"
                                 >
                                   Adjust
                                 </button>
@@ -1346,6 +1481,406 @@ export default function InventorySummary() {
             >
               <Trash2 size={16} />
               {actionLoading ? 'Processing...' : `Confirm Write-Off (-${writeOffMode === 'full' ? Number(selectedBatch?.currentQuantity) : Number(writeOffQuantity) || 0} units)`}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 3: DEDICATED ADD STOCK / RECEIVE INVENTORY MODAL */}
+      <Modal
+        isOpen={addStockModalOpen}
+        onClose={() => setAddStockModalOpen(false)}
+        title="Add Stock / Receive Inventory"
+        maxWidth="760px"
+      >
+        <form onSubmit={handleAddStockSubmit}>
+          {/* Context Banner */}
+          <div
+            style={{
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '0.85rem',
+              color: '#065f46'
+            }}
+          >
+            <PlusCircle size={20} color="#059669" style={{ flexShrink: 0 }} />
+            <div>
+              Directly credit new units to active warehouse inventory. Choose to create a new traceable lot (with expiration date for FEFO) or replenish an existing batch.
+            </div>
+          </div>
+
+          {/* Step 1: Select Product */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}
+          >
+            <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+              1. Select Product to Receive *
+            </label>
+            <select
+              className="form-select"
+              value={addStockData.productId}
+              onChange={(e) => handleAddStockProductChange(e.target.value)}
+              style={{ fontSize: '0.95rem', padding: '10px 12px' }}
+            >
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.sku}) — In Stock: {p.currentStock || 0} {p.unit}s {p.category ? `• ${p.category.name}` : ''}
+                </option>
+              ))}
+            </select>
+
+            {currentAddProduct && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginTop: '12px',
+                  padding: '10px 14px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <img
+                  src={getProductImageUrl(currentAddProduct)}
+                  alt={currentAddProduct.name}
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '8px',
+                    objectFit: 'cover',
+                    border: '1px solid #cbd5e1'
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{currentAddProduct.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    SKU: <span className="mono">{currentAddProduct.sku}</span> • Barcode: <span className="mono">{currentAddProduct.barcode || 'N/A'}</span> • Current Total Stock:{' '}
+                    <strong style={{ color: Number(currentAddProduct.currentStock) <= 0 ? '#dc2626' : '#16a34a' }}>
+                      {currentAddProduct.currentStock || 0} {currentAddProduct.unit}s
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Step 2: Batch Destination Mode */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}
+          >
+            <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+              2. Batch Destination & Traceability
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              <div
+                onClick={() => setAddStockData({ ...addStockData, batchMode: 'new' })}
+                style={{
+                  border: `2px solid ${addStockData.batchMode === 'new' ? '#2563eb' : '#e2e8f0'}`,
+                  backgroundColor: addStockData.batchMode === 'new' ? '#eff6ff' : '#ffffff',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#1e40af', fontSize: '0.9rem' }}>
+                  <Boxes size={16} /> Create New Batch (FEFO)
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                  Assign a unique lot/batch number, wholesale cost, and expiration date.
+                </div>
+              </div>
+
+              <div
+                onClick={() => {
+                  if (currentAddProduct?.batches && currentAddProduct.batches.length > 0) {
+                    setAddStockData({
+                      ...addStockData,
+                      batchMode: 'existing',
+                      batchId: addStockData.batchId || currentAddProduct.batches[0].id
+                    });
+                  }
+                }}
+                style={{
+                  border: `2px solid ${addStockData.batchMode === 'existing' ? '#2563eb' : '#e2e8f0'}`,
+                  backgroundColor: addStockData.batchMode === 'existing' ? '#eff6ff' : '#ffffff',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  cursor: (currentAddProduct?.batches && currentAddProduct.batches.length > 0) ? 'pointer' : 'not-allowed',
+                  opacity: (currentAddProduct?.batches && currentAddProduct.batches.length > 0) ? 1 : 0.6,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#1e40af', fontSize: '0.9rem' }}>
+                  <RotateCcw size={16} /> Replenish Existing Batch
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                  {currentAddProduct?.batches && currentAddProduct.batches.length > 0
+                    ? `Add units into one of ${currentAddProduct.batches.length} active batch(es).`
+                    : 'No active batches available for this product yet.'}
+                </div>
+              </div>
+            </div>
+
+            {addStockData.batchMode === 'new' ? (
+              <div className="grid-3" style={{ gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>Batch / Lot #</label>
+                    <button
+                      type="button"
+                      onClick={() => setAddStockData({ ...addStockData, batchNumber: `BAT-${Date.now().toString().slice(-6)}` })}
+                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.725rem', cursor: 'pointer', padding: 0 }}
+                    >
+                      Auto-Gen
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    className="form-input mono"
+                    placeholder="e.g. BAT-2026-01"
+                    value={addStockData.batchNumber}
+                    onChange={(e) => setAddStockData({ ...addStockData, batchNumber: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, marginBottom: '4px' }}>
+                    Expiration Date
+                  </label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={addStockData.expiryDate}
+                    onChange={(e) => setAddStockData({ ...addStockData, expiryDate: e.target.value })}
+                  />
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                    Critical for First-Expired-First-Out sales queue.
+                  </span>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, marginBottom: '4px' }}>
+                    Unit Cost Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input mono"
+                    placeholder="0.00"
+                    value={addStockData.costPrice}
+                    onChange={(e) => setAddStockData({ ...addStockData, costPrice: e.target.value })}
+                  />
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                    Wholesale cost for valuation.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Target Batch to Replenish</label>
+                <select
+                  className="form-select"
+                  value={addStockData.batchId}
+                  onChange={(e) => setAddStockData({ ...addStockData, batchId: e.target.value })}
+                >
+                  {currentAddProduct?.batches?.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.batchNumber} (Current: {Number(b.currentQuantity)} {currentAddProduct.unit}s{b.expiryDate ? ` • Exp: ${new Date(b.expiryDate).toLocaleDateString()}` : ''})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Step 3: Quantity */}
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}
+          >
+            <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+              3. Quantity to Add *
+            </label>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                required
+                className="form-input mono"
+                placeholder="Enter quantity of units..."
+                value={addStockData.quantity}
+                onChange={(e) => setAddStockData({ ...addStockData, quantity: e.target.value })}
+                style={{ fontSize: '1.15rem', fontWeight: 700, padding: '10px 14px' }}
+              />
+
+              {/* Quick Stepper Chips */}
+              <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Quick Quantity:</span>
+                {[5, 10, 25, 50, 100, 200].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '3px 8px' }}
+                    onClick={() => setAddStockData({ ...addStockData, quantity: (Number(addStockData.quantity) || 0) + num })}
+                  >
+                    +{num}
+                  </button>
+                ))}
+                {addStockData.quantity && (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.75rem', padding: '3px 8px', color: '#dc2626' }}
+                    onClick={() => setAddStockData({ ...addStockData, quantity: '' })}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Live Calculation Preview Card */}
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1.5px solid #a7f3d0',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr auto 1fr',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '8px',
+                marginTop: '12px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Current Stock
+                </div>
+                <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                  {currentProductTotalStock} {currentAddProduct?.unit}s
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>+</div>
+
+              <div>
+                <div style={{ fontSize: '0.7rem', color: '#059669', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Adding
+                </div>
+                <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
+                  +{addStockQtyNumber} {currentAddProduct?.unit}s
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb' }}>=</div>
+
+              <div>
+                <div style={{ fontSize: '0.7rem', color: '#2563eb', textTransform: 'uppercase', fontWeight: 600 }}>
+                  New Total Stock
+                </div>
+                <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e40af' }}>
+                  {projectedProductTotalStock} {currentAddProduct?.unit}s
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 4: Movement Type & Audit Reason */}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <div className="grid-2" style={{ marginBottom: '10px' }}>
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Intake Classification</label>
+                <select
+                  className="form-select"
+                  value={addStockData.movementType}
+                  onChange={(e) => setAddStockData({ ...addStockData, movementType: e.target.value })}
+                >
+                  <option value="RECEIPT">Direct Shipment Intake (Receipt)</option>
+                  <option value="ADJUSTMENT_ADD">Inventory Recount / Adjustment (+)</option>
+                  <option value="OPENING_STOCK">Opening Stock Allocation</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Audit Reason / Note *</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="e.g. Supplier delivery, warehouse restock..."
+                  value={addStockData.reason}
+                  onChange={(e) => setAddStockData({ ...addStockData, reason: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Quick Reason Chips */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Quick Presets:</span>
+              {[
+                'Direct supplier delivery',
+                'Warehouse replenishment',
+                'Found shelf stock recount',
+                'Direct emergency restock'
+              ].map((reasonText) => (
+                <button
+                  key={reasonText}
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                  onClick={() => setAddStockData({ ...addStockData, reason: reasonText })}
+                >
+                  {reasonText}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button type="button" className="btn btn-outline" onClick={() => setAddStockModalOpen(false)}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={actionLoading || !addStockData.productId || Number(addStockData.quantity) <= 0}
+              style={{ minWidth: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <PlusCircle size={16} />
+              {actionLoading ? 'Adding Stock...' : `Confirm & Add ${addStockQtyNumber || 0} Units`}
             </button>
           </div>
         </form>

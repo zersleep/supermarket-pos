@@ -44,6 +44,7 @@ export default function Sidebar() {
       title: t('nav.inventory_supply', 'Inventory & Supply'),
       items: [
         { label: t('nav.products', 'Products Catalog'), path: '/products', icon: Package, show: canManageProducts },
+        { label: t('nav.categories', 'Categories'), path: '/categories', icon: Folder, show: canManageProducts },
         { label: t('nav.inventory', 'Inventory & Batches'), path: '/inventory', icon: Boxes, show: canManageInventory },
         { label: t('nav.suppliers', 'Suppliers'), path: '/suppliers', icon: Truck, show: canManageInventory },
         { label: t('nav.purchasing', 'Purchase Orders'), path: '/purchasing', icon: FileText, show: canManageInventory }

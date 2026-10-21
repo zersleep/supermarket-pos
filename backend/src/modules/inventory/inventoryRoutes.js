@@ -12,6 +12,7 @@ router.get('/batches', inventoryController.getBatches);
 router.get('/movements', inventoryController.getStockMovements);
 
 // Inventory modifications restricted to Owner, Admin, and Inventory Manager
+router.post('/add-stock', requireRoles(ROLES.OWNER, ROLES.ADMIN, ROLES.INVENTORY_MANAGER), inventoryController.addStock);
 router.post('/adjust', requireRoles(ROLES.OWNER, ROLES.ADMIN, ROLES.INVENTORY_MANAGER), inventoryController.adjustStock);
 router.post('/write-off', requireRoles(ROLES.OWNER, ROLES.ADMIN, ROLES.INVENTORY_MANAGER), inventoryController.writeOffBatch);
 

@@ -4,7 +4,8 @@ const {
   setupSchema,
   loginSchema,
   checkoutSchema,
-  createRefundSchema
+  createRefundSchema,
+  addStockSchema
 } = require('../src/validators');
 
 describe('Input Validation & Security Schemas Tests', () => {
@@ -72,5 +73,30 @@ describe('Input Validation & Security Schemas Tests', () => {
         items: []
       });
     });
+  });
+
+  test('addStockSchema validates stock intake parameters correctly', () => {
+    // Non-positive quantity throws
+    assert.throws(() => {
+      addStockSchema.parse({
+        productId: '550e8400-e29b-41d4-a716-446655440000',
+        quantity: 0
+      });
+    });
+
+    // Valid direct stock intake payload
+    const valid = addStockSchema.parse({
+      productId: '550e8400-e29b-41d4-a716-446655440000',
+      quantity: 50,
+      batchNumber: 'LOT-2026-X',
+      costPrice: 2.75,
+      expiryDate: '2027-01-01',
+      movementType: 'RECEIPT',
+      reason: 'Direct supplier shipment'
+    });
+
+    assert.equal(valid.quantity, 50);
+    assert.equal(valid.movementType, 'RECEIPT');
+    assert.equal(valid.costPrice, 2.75);
   });
 });
